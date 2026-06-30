@@ -1,0 +1,253 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - paragraph [ref=e5]: VoiceOps Control
+        - heading "BPO voice support command center" [level=1] [ref=e6]
+        - paragraph [ref=e7]: Business-logic-first operations workspace for live calls, callbacks, QA, and client program governance.
+      - navigation "Primary" [ref=e8]:
+        - link "Command Center Operations pulse" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - img [ref=e11]
+          - generic [ref=e13]:
+            - generic [ref=e14]: Command Center
+            - generic [ref=e15]: Operations pulse
+        - link "Organizations Tenant governance" [ref=e16] [cursor=pointer]:
+          - /url: /organizations
+          - img [ref=e18]
+          - generic [ref=e20]:
+            - generic [ref=e21]: Organizations
+            - generic [ref=e22]: Tenant governance
+        - link "Programs Client accounts" [ref=e23] [cursor=pointer]:
+          - /url: /programs
+          - img [ref=e25]
+          - generic [ref=e27]:
+            - generic [ref=e28]: Programs
+            - generic [ref=e29]: Client accounts
+        - link "Calls Live and historical" [ref=e30] [cursor=pointer]:
+          - /url: /calls
+          - img [ref=e32]
+          - generic [ref=e34]:
+            - generic [ref=e35]: Calls
+            - generic [ref=e36]: Live and historical
+        - link "Voice Lab Session simulator" [ref=e37] [cursor=pointer]:
+          - /url: /voice-lab
+          - img [ref=e39]
+          - generic [ref=e41]:
+            - generic [ref=e42]: Voice Lab
+            - generic [ref=e43]: Session simulator
+        - link "Tickets Complaint workflows" [ref=e44] [cursor=pointer]:
+          - /url: /tickets
+          - img [ref=e46]
+          - generic [ref=e48]:
+            - generic [ref=e49]: Tickets
+            - generic [ref=e50]: Complaint workflows
+        - link "Callbacks Follow-up queue" [ref=e51] [cursor=pointer]:
+          - /url: /callbacks
+          - img [ref=e53]
+          - generic [ref=e55]:
+            - generic [ref=e56]: Callbacks
+            - generic [ref=e57]: Follow-up queue
+        - link "QA Review Risk and coaching" [ref=e58] [cursor=pointer]:
+          - /url: /reviews
+          - img [ref=e60]
+          - generic [ref=e62]:
+            - generic [ref=e63]: QA Review
+            - generic [ref=e64]: Risk and coaching
+        - link "Analytics Resolution trends" [ref=e65] [cursor=pointer]:
+          - /url: /analytics
+          - img [ref=e67]
+          - generic [ref=e69]:
+            - generic [ref=e70]: Analytics
+            - generic [ref=e71]: Resolution trends
+        - link "Knowledge Grounded answers" [ref=e72] [cursor=pointer]:
+          - /url: /knowledge-base
+          - img [ref=e74]
+          - generic [ref=e76]:
+            - generic [ref=e77]: Knowledge
+            - generic [ref=e78]: Grounded answers
+        - link "Customers Profiles and VIPs" [ref=e79] [cursor=pointer]:
+          - /url: /customers
+          - img [ref=e81]
+          - generic [ref=e83]:
+            - generic [ref=e84]: Customers
+            - generic [ref=e85]: Profiles and VIPs
+      - generic [ref=e86]:
+        - generic [ref=e87]: Browser-first • English + Hindi
+        - strong [ref=e88]: Free-first stack
+    - main [ref=e89]:
+      - generic [ref=e90]:
+        - generic [ref=e91]:
+          - paragraph [ref=e92]: Operator mode
+          - heading "BrightConnect BPO" [level=2] [ref=e93]
+        - generic [ref=e94]:
+          - generic [ref=e95]: Tenant-aware
+          - generic [ref=e96]: Callback fallback
+          - generic [ref=e97]: Guarded verification
+      - generic [ref=e98]:
+        - generic [ref=e99]:
+          - generic [ref=e100]:
+            - heading "Command center" [level=2] [ref=e101]
+            - paragraph [ref=e102]: Supervisor-first view across live voice operations, callback pressure, and QA coverage.
+          - generic [ref=e103]: 2 client programs
+        - generic [ref=e104]:
+          - generic [ref=e105]:
+            - generic [ref=e107]:
+              - heading "Live operator pulse" [level=3] [ref=e108]
+              - paragraph [ref=e109]: Focused on Acme Insurance with guarded verification and callback fallback.
+            - generic [ref=e110]:
+              - article [ref=e111]:
+                - paragraph [ref=e112]: Live calls
+                - paragraph [ref=e113]: "2"
+                - paragraph [ref=e114]: Sessions active right now
+              - article [ref=e115]:
+                - paragraph [ref=e116]: Queue depth
+                - paragraph [ref=e117]: "3"
+                - paragraph [ref=e118]: Calls still needing closure
+              - article [ref=e119]:
+                - paragraph [ref=e120]: Escalations
+                - paragraph [ref=e121]: "1"
+                - paragraph [ref=e122]: Human takeover events today
+              - article [ref=e123]:
+                - paragraph [ref=e124]: QA pending
+                - paragraph [ref=e125]: "1"
+                - paragraph [ref=e126]: Calls waiting for reviewer attention
+          - generic [ref=e127]:
+            - generic [ref=e129]:
+              - heading "Intent velocity" [level=3] [ref=e130]
+              - paragraph [ref=e131]: Current mix of requests across active programs
+            - img [ref=e132]
+            - generic [ref=e134]:
+              - generic [ref=e135]:
+                - generic [ref=e136]:
+                  - strong [ref=e137]: case status
+                  - generic [ref=e138]: 45%
+                - generic [ref=e140]: 9 calls
+              - generic [ref=e141]:
+                - generic [ref=e142]:
+                  - strong [ref=e143]: new complaint
+                  - generic [ref=e144]: 30%
+                - generic [ref=e146]: 6 calls
+              - generic [ref=e147]:
+                - generic [ref=e148]:
+                  - strong [ref=e149]: human transfer
+                  - generic [ref=e150]: 15%
+                - generic [ref=e152]: 3 calls
+              - generic [ref=e153]:
+                - generic [ref=e154]:
+                  - strong [ref=e155]: faq answer
+                  - generic [ref=e156]: 10%
+                - generic [ref=e158]: 2 calls
+        - generic [ref=e159]:
+          - generic [ref=e160]:
+            - generic [ref=e162]:
+              - heading "Live calls board" [level=3] [ref=e163]
+              - paragraph [ref=e164]: Current sessions with visibility into intent, sentiment, and verification state
+            - generic [ref=e165]:
+              - generic [ref=e166]:
+                - generic [ref=e167]:
+                  - strong [ref=e168]: case status
+                  - generic [ref=e169]:
+                    - generic [ref=e170]: neutral
+                    - generic [ref=e171]: verified
+                - paragraph [ref=e172]: Claim CLM-9001 is under review after documents were received today.
+                - generic [ref=e173]:
+                  - generic [ref=e174]: "+919876543210"
+                  - generic [ref=e175]: English
+                  - generic [ref=e176]: answer or tool action
+                  - generic [ref=e177]: 88% confidence
+              - generic [ref=e178]:
+                - generic [ref=e179]:
+                  - strong [ref=e180]: human transfer
+                  - generic [ref=e181]:
+                    - generic [ref=e182]: angry
+                    - generic [ref=e183]: verified
+                - paragraph [ref=e184]: VIP member asked for live specialist after rejected claim.
+                - generic [ref=e185]:
+                  - generic [ref=e186]: "+919123456789"
+                  - generic [ref=e187]: Hindi
+                  - generic [ref=e188]: live handoff
+                  - generic [ref=e189]: 95% confidence
+          - generic [ref=e190]:
+            - generic [ref=e192]:
+              - heading "Supervisor watchlist" [level=3] [ref=e193]
+              - paragraph [ref=e194]: Calls or follow-ups most likely to need intervention
+            - generic [ref=e195]:
+              - generic [ref=e196]:
+                - generic [ref=e197]:
+                  - strong [ref=e198]: case status
+                  - generic [ref=e199]: open
+                - paragraph [ref=e200]: Claim CLM-9001 is under review after documents were received today.
+                - generic [ref=e201]:
+                  - generic [ref=e202]: English
+                  - generic [ref=e203]: "+919876543210"
+                  - generic [ref=e204]: 88% confidence
+              - generic [ref=e205]:
+                - generic [ref=e206]:
+                  - strong [ref=e207]: new complaint
+                  - generic [ref=e208]: callback
+                - paragraph [ref=e209]: Complaint escalated into callback queue with Hindi preference.
+                - generic [ref=e210]:
+                  - generic [ref=e211]: Hindi
+                  - generic [ref=e212]: "+919876543211"
+                  - generic [ref=e213]: 91% confidence
+              - generic [ref=e214]:
+                - generic [ref=e215]:
+                  - strong [ref=e216]: human transfer
+                  - generic [ref=e217]: escalated
+                - paragraph [ref=e218]: VIP member asked for live specialist after rejected claim.
+                - generic [ref=e219]:
+                  - generic [ref=e220]: Hindi
+                  - generic [ref=e221]: "+919123456789"
+                  - generic [ref=e222]: 95% confidence
+        - generic [ref=e223]:
+          - generic [ref=e224]:
+            - generic [ref=e226]:
+              - heading "Callback queue" [level=3] [ref=e227]
+              - paragraph [ref=e228]: Pending follow-ups by urgency
+            - generic [ref=e230]:
+              - generic [ref=e231]:
+                - strong [ref=e232]: Hindi callback requested after complaint intake.
+                - generic [ref=e233]: high
+              - generic [ref=e234]:
+                - generic [ref=e235]: 11:30 AM today
+                - generic [ref=e236]: pending
+          - generic [ref=e237]:
+            - generic [ref=e239]:
+              - heading "Open tickets" [level=3] [ref=e240]
+              - paragraph [ref=e241]: AI-created complaints and operator follow-up work
+            - generic [ref=e242]:
+              - generic [ref=e243]:
+                - generic [ref=e244]:
+                  - strong [ref=e245]: Complaint about delayed document review
+                  - generic [ref=e246]: high
+                - paragraph [ref=e247]: Customer requested human follow-up in Hindi.
+              - generic [ref=e248]:
+                - generic [ref=e249]:
+                  - strong [ref=e250]: Rejected claim appeal requested
+                  - generic [ref=e251]: critical
+                - paragraph [ref=e252]: VIP requested live specialist and supervisor review.
+          - generic [ref=e253]:
+            - generic [ref=e255]:
+              - heading "QA flags" [level=3] [ref=e256]
+              - paragraph [ref=e257]: Reviews that need coaching or escalation analysis
+            - generic [ref=e258]:
+              - generic [ref=e259]:
+                - generic [ref=e260]:
+                  - strong [ref=e261]: Reviewed call
+                  - generic [ref=e262]: reviewed
+                - paragraph [ref=e263]: Strong verification and concise answer.
+                - generic [ref=e264]:
+                  - generic [ref=e265]: Score 92
+                  - generic [ref=e266]: clear disclosure
+              - generic [ref=e267]:
+                - generic [ref=e268]:
+                  - strong [ref=e269]: Awaiting reviewer action
+                  - generic [ref=e270]: pending
+                - paragraph [ref=e271]: Awaiting supervisor comment.
+                - generic [ref=e272]:
+                  - generic [ref=e273]: Score pending
+                  - generic [ref=e274]: missed live takeover timing
+  - button "Open Next.js Dev Tools" [ref=e280] [cursor=pointer]:
+    - img [ref=e281]
+  - alert [ref=e284]

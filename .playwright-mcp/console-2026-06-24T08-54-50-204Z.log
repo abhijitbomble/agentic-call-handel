@@ -1,0 +1,11 @@
+[     203ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477
+[     845ms] [LOG] [Fast Refresh] done in 758ms @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477
+[    1880ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477
+[    1946ms] [LOG] [HMR] connected @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477
+[   24651ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477
+[   26155ms] [LOG] [Fast Refresh] done in 1615ms @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477
+[   26387ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477
+[   26390ms] [LOG] [Fast Refresh] done in 103ms @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477
+[   40690ms] [LOG] [Fast Refresh] rebuilding @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477
+[   41458ms] [LOG] [Fast Refresh] done in 882ms @ http://127.0.0.1:3000/_next/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477
+[   41486ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://127.0.0.1:3000/api/voice-lab/start:0

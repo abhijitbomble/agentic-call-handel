@@ -1,0 +1,116 @@
+- generic [ref=e2]:
+  - complementary [ref=e3]:
+    - generic [ref=e4]:
+      - paragraph [ref=e5]: VoiceOps Control
+      - heading "BPO voice support command center" [level=1] [ref=e6]
+      - paragraph [ref=e7]: Business-logic-first operations workspace for live calls, callbacks, QA, and client program governance.
+    - navigation "Primary" [ref=e8]:
+      - link "Command Center Operations pulse" [ref=e9] [cursor=pointer]:
+        - /url: /
+        - img [ref=e11]
+        - generic [ref=e13]:
+          - generic [ref=e14]: Command Center
+          - generic [ref=e15]: Operations pulse
+      - link "Organizations Tenant governance" [ref=e16] [cursor=pointer]:
+        - /url: /organizations
+        - img [ref=e18]
+        - generic [ref=e20]:
+          - generic [ref=e21]: Organizations
+          - generic [ref=e22]: Tenant governance
+      - link "Programs Client accounts" [ref=e23] [cursor=pointer]:
+        - /url: /programs
+        - img [ref=e25]
+        - generic [ref=e27]:
+          - generic [ref=e28]: Programs
+          - generic [ref=e29]: Client accounts
+      - link "Calls Live and historical" [ref=e30] [cursor=pointer]:
+        - /url: /calls
+        - img [ref=e32]
+        - generic [ref=e34]:
+          - generic [ref=e35]: Calls
+          - generic [ref=e36]: Live and historical
+      - link "Voice Lab Session simulator" [ref=e37] [cursor=pointer]:
+        - /url: /voice-lab
+        - img [ref=e39]
+        - generic [ref=e41]:
+          - generic [ref=e42]: Voice Lab
+          - generic [ref=e43]: Session simulator
+      - link "Tickets Complaint workflows" [ref=e44] [cursor=pointer]:
+        - /url: /tickets
+        - img [ref=e46]
+        - generic [ref=e48]:
+          - generic [ref=e49]: Tickets
+          - generic [ref=e50]: Complaint workflows
+      - link "Callbacks Follow-up queue" [ref=e51] [cursor=pointer]:
+        - /url: /callbacks
+        - img [ref=e53]
+        - generic [ref=e55]:
+          - generic [ref=e56]: Callbacks
+          - generic [ref=e57]: Follow-up queue
+      - link "QA Review Risk and coaching" [ref=e58] [cursor=pointer]:
+        - /url: /reviews
+        - img [ref=e60]
+        - generic [ref=e62]:
+          - generic [ref=e63]: QA Review
+          - generic [ref=e64]: Risk and coaching
+      - link "Analytics Resolution trends" [ref=e65] [cursor=pointer]:
+        - /url: /analytics
+        - img [ref=e67]
+        - generic [ref=e69]:
+          - generic [ref=e70]: Analytics
+          - generic [ref=e71]: Resolution trends
+      - link "Knowledge Grounded answers" [ref=e72] [cursor=pointer]:
+        - /url: /knowledge-base
+        - img [ref=e74]
+        - generic [ref=e76]:
+          - generic [ref=e77]: Knowledge
+          - generic [ref=e78]: Grounded answers
+      - link "Customers Profiles and VIPs" [ref=e79] [cursor=pointer]:
+        - /url: /customers
+        - img [ref=e81]
+        - generic [ref=e83]:
+          - generic [ref=e84]: Customers
+          - generic [ref=e85]: Profiles and VIPs
+    - generic [ref=e86]:
+      - generic [ref=e87]: Browser-first • English + Hindi
+      - strong [ref=e88]: Free-first stack
+  - main [ref=e89]:
+    - generic [ref=e90]:
+      - generic [ref=e91]:
+        - paragraph [ref=e92]: Operator mode
+        - heading "BrightConnect BPO" [level=2] [ref=e93]
+      - generic [ref=e94]:
+        - generic [ref=e95]: Tenant-aware
+        - generic [ref=e96]: Callback fallback
+        - generic [ref=e97]: Guarded verification
+    - generic [ref=e98]:
+      - generic [ref=e99]:
+        - generic [ref=e100]:
+          - heading "Voice lab" [level=2] [ref=e101]
+          - paragraph [ref=e102]: Browser-side simulator for the live call state machine, verification guardrails, tool execution, and callback/live handoff policy.
+        - generic [ref=e103]: Real backend flow
+      - generic [ref=e104]:
+        - generic [ref=e106]:
+          - heading "Session simulator" [level=3] [ref=e107]
+          - paragraph [ref=e108]: "This uses the FastAPI `/voice/sessions` endpoints through secure Next.js route handlers."
+        - generic [ref=e110]:
+          - generic [ref=e111]:
+            - generic [ref=e112]:
+              - generic [ref=e113]: Program
+              - combobox "Program" [ref=e114]:
+                - option "Acme Insurance" [selected]
+            - generic [ref=e115]:
+              - generic [ref=e116]: Queue
+              - combobox "Queue" [ref=e117]:
+                - option "Acme Bilingual Queue" [selected]
+            - generic [ref=e118]:
+              - generic [ref=e119]: Customer phone
+              - textbox "Customer phone" [ref=e120]: "+919876543210"
+            - generic [ref=e121]:
+              - generic [ref=e122]: Preferred language
+              - combobox "Preferred language" [ref=e123]:
+                - option "English" [selected]
+                - option "Hindi"
+            - button "Start demo session" [ref=e124] [cursor=pointer]
+            - paragraph [ref=e125]: "Try seeded examples like `+919876543210` with `I want the status of claim CLM-9001`, or request a human to exercise live handoff logic."
+          - paragraph [ref=e127]: Start a demo session to exercise the real backend state machine from the browser.

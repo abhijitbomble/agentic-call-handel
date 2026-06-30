@@ -1,0 +1,7 @@
+INFO:     Started server process [24144]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8020 (Press CTRL+C to quit)
+INFO:     127.0.0.1:60226 - "WebSocket /ws/customer-call/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJxdWV1ZV9pZCI6Ijg5MWQwM2M1LTc1ODItNGZmOC04YjhkLThhNGRkMDRiYmY0ZiIsInByb2dyYW1faWQiOiJiOTZkYzc0OC04NmIwLTRmMGMtYTFiYy0zNmYxZWE0MzQzZGQiLCJwaG9uZSI6Iis5MTk4NzY1NDMyMTAiLCJsYW5ndWFnZSI6IkVuZ2xpc2giLCJleHAiOjE3ODI3NTI3NzZ9.CrbjohZv68Aq1nZtCZfv9Ax_p4t2Us2dcv4ImvFBVpA" [accepted]
+INFO:     connection open
+INFO:     connection closed

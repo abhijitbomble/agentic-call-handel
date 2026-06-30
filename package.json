@@ -1,0 +1,15 @@
+{
+  "name": "voiceops-control",
+  "private": true,
+  "scripts": {
+    "dev:web": "npx --prefix apps/web next dev --port 4000",
+    "build:web": "npm --prefix apps/web run build",
+    "lint:web": "npm --prefix apps/web run lint",
+    "dev:api": "python -m uvicorn app.main:app --app-dir apps/api --reload --port 8020",
+    "test:api": "python -m pytest apps/api/tests -q",
+    "start:railway": "node scripts/railway-start.mjs"
+  },
+  "dependencies": {
+    "http-proxy": "^1.18.1"
+  }
+}
