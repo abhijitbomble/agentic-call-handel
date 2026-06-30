@@ -25,7 +25,7 @@ COPY README.md ./README.md
 COPY scripts/ ./scripts/
 COPY .env.example ./.env.example
 
-RUN pip install --no-cache-dir -e ./apps/api
+RUN pip install --no-cache-dir --ignore-requires-python -e ./apps/api
 RUN npm --prefix apps/web install
 RUN npm --prefix apps/web run build
 
