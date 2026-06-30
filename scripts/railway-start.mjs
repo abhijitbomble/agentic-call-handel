@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { createProxyServer } from "http-proxy";
+import httpProxy from "http-proxy";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,7 +31,7 @@ const apiCommand = process.platform === "win32" ? "python" : "python3";
 launch(apiCommand, ["-m", "uvicorn", "app.main:app", "--app-dir", "apps/api", "--host", "127.0.0.1", "--port", String(apiPort)], repoRoot);
 launch("npm", ["run", "start", "--", "--hostname", "127.0.0.1", "--port", String(webPort)], path.join(repoRoot, "apps/web"));
 
-const proxy = createProxyServer({ changeOrigin: true, xfwd: true, ws: true });
+const proxy = httpProxy.createProxyServer({ changeOrigin: true, xfwd: true, ws: true });
 const backendPrefixes = ["/twilio", "/ws", "/health", "/docs", "/redoc", "/openapi.json"];
 
 function targetFor(url) {
@@ -56,3 +56,4 @@ server.listen(publicPort, "0.0.0.0", () => {
 
 process.on("SIGINT", () => process.exit(0));
 process.on("SIGTERM", () => process.exit(0));
+
