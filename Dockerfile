@@ -1,7 +1,6 @@
 FROM node:20-bookworm-slim
 
 ENV PYTHONUNBUFFERED=1
-ENV NODE_ENV=production
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
@@ -26,7 +25,8 @@ COPY scripts/ ./scripts/
 COPY .env.example ./.env.example
 
 RUN pip install --no-cache-dir --ignore-requires-python -e ./apps/api
-RUN npm --prefix apps/web install
+RUN npm --prefix apps/web install --include=dev
+ENV NODE_ENV=production
 RUN npm --prefix apps/web run build
 
 EXPOSE 3000
