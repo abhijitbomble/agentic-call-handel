@@ -32,12 +32,23 @@ launch(apiCommand, ["-m", "uvicorn", "app.main:app", "--app-dir", "apps/api", "-
 launch("npm", ["run", "start", "--", "--hostname", "127.0.0.1", "--port", String(webPort)], path.join(repoRoot, "apps/web"));
 
 const proxy = httpProxy.createProxyServer({ changeOrigin: true, xfwd: true, ws: true });
-const backendPrefixes = ["/twilio", "/ws", "/health", "/docs", "/redoc", "/openapi.json"];
+const backendExactPaths = new Set([
+  "/health",
+  "/docs",
+  "/redoc",
+  "/openapi.json",
+  "/twilio/voice",
+  "/twilio/browser/voice",
+  "/twilio/status",
+  "/twilio/stream-action",
+  "/twilio/dial-complete",
+]);
 
 function targetFor(url) {
-  return backendPrefixes.some((prefix) => url.startsWith(prefix))
-    ? `http://127.0.0.1:${apiPort}`
-    : `http://127.0.0.1:${webPort}`;
+  if (backendExactPaths.has(url) || url.startsWith("/ws")) {
+    return `http://127.0.0.1:${apiPort}`;
+  }
+  return `http://127.0.0.1:${webPort}`;
 }
 
 const server = http.createServer((req, res) => {
@@ -56,4 +67,3 @@ server.listen(publicPort, "0.0.0.0", () => {
 
 process.on("SIGINT", () => process.exit(0));
 process.on("SIGTERM", () => process.exit(0));
-
