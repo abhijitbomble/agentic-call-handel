@@ -1,0 +1,713 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import type { Program, ProgramPolicy, ProgramPolicyRuntime } from "@/lib/types";
+
+type Props = {
+  orgName: string;
+  programs: Program[];
+};
+
+type BuilderDraft = {
+  mode: string;
+  requiredFor: string;
+  allowedIdentifiers: string;
+  liveTriggers: string;
+  callbackTriggers: string;
+  callbackOnUnavailable: boolean;
+  lowConfidenceThreshold: number;
+  allowedDocumentTypes: string;
+  allowedIntents: string;
+  enabledTools: string;
+  supportedChannels: string;
+  tone: string;
+  length: string;
+  languagePolicy: string;
+  askOneQuestionAtATime: boolean;
+  confirmCriticalDetails: boolean;
+  summaryBeforeHandoff: boolean;
+};
+
+type ValidationFinding = {
+  kind: "success" | "warning" | "info";
+  title: string;
+  detail: string;
+};
+
+const DEFAULT_DRAFT: BuilderDraft = {
+  mode: "ai_first_then_human",
+  requiredFor: "case_status",
+  allowedIdentifiers: "customer_code, last4_phone",
+  liveTriggers: "human_request, angry, verification_failures, low_confidence, high_risk",
+  callbackTriggers: "no_agent_available, outside_business_hours, callback_request, low_confidence",
+  callbackOnUnavailable: true,
+  lowConfidenceThreshold: 0.4,
+  allowedDocumentTypes: "faq, policy, procedure",
+  allowedIntents: "faq_answer, case_status, policy_query, payment_issue",
+  enabledTools: "lookup_case, create_ticket, create_callback, request_handoff, verify_customer",
+  supportedChannels: "phone, browser",
+  tone: "calm",
+  length: "short",
+  languagePolicy: "match_caller",
+  askOneQuestionAtATime: true,
+  confirmCriticalDetails: true,
+  summaryBeforeHandoff: true,
+};
+
+function splitList(value: string): string[] {
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function joinList(values: string[] | undefined): string {
+  return (values ?? []).join(", ");
+}
+
+function deepMerge(base: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = { ...base };
+  for (const [key, value] of Object.entries(patch)) {
+    const current = result[key];
+    if (current && typeof current === "object" && !Array.isArray(current) && value && typeof value === "object" && !Array.isArray(value)) {
+      result[key] = deepMerge(current as Record<string, unknown>, value as Record<string, unknown>);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+function basePolicy(): ProgramPolicy {
+  return {
+    version: 1,
+    mode: "ai_first_then_human",
+    intent_policy: {
+      allowed_intents: ["greeting", "faq_answer", "case_status", "policy_query", "payment_issue", "complaint", "callback_request", "human_transfer", "verification"],
+      default_intent: "unknown_needs_clarification",
+      blocked_intents: [],
+    },
+    confidence_policy: {
+      answer_threshold: 0.8,
+      clarify_threshold: 0.55,
+      escalate_threshold: 0.4,
+      max_clarify_turns: 1,
+    },
+    fallback_policy: {
+      on_low_confidence: "clarify_then_escalate",
+      on_no_kb_match: "ask_clarify",
+      on_missing_required_data: "ask_one_question",
+      on_silent_user: "repeat_prompt_once",
+    },
+    verification_policy: {
+      required_for: ["case_status"],
+      allowed_identifiers: ["customer_code", "last4_phone"],
+    },
+    escalation_policy: {
+      live_triggers: ["human_request", "angry", "verification_failures", "low_confidence", "high_risk"],
+      callback_when_unavailable: true,
+      callback_triggers: ["no_agent_available", "outside_business_hours", "callback_request", "low_confidence"],
+      require_summary_before_handoff: true,
+    },
+    kb_policy: {
+      allowed_document_types: ["faq", "policy", "procedure"],
+      allowed_intents: ["faq_answer", "case_status", "policy_query", "payment_issue"],
+      must_be_approved: true,
+      match_same_program_only: true,
+    },
+    tool_policy: {
+      enabled_tools: ["lookup_case", "create_ticket", "create_callback", "request_handoff", "verify_customer"],
+    },
+    response_style: {
+      tone: "calm",
+      length: "short",
+      language_policy: "match_caller",
+      ask_one_question_at_a_time: true,
+      confirm_critical_details: true,
+    },
+    queue_policy: {
+      live_handoff_enabled: true,
+      callback_enabled: true,
+      supported_channels: ["phone", "browser"],
+    },
+  };
+}
+
+function normalizePolicy(program: Program): ProgramPolicy {
+  const merged = deepMerge(basePolicy() as Record<string, unknown>, (program.policy_json ?? {}) as Record<string, unknown>) as ProgramPolicy;
+  merged.verification_policy = deepMerge(
+    basePolicy().verification_policy as Record<string, unknown>,
+    (program.verification_policy ?? {}) as Record<string, unknown>,
+  ) as ProgramPolicy["verification_policy"];
+  merged.handoff_policy = {
+    live_on: program.handoff_policy?.live_on ?? [],
+    callback_on_unavailable: program.handoff_policy?.callback_on_unavailable ?? true,
+    low_confidence_threshold: program.handoff_policy?.low_confidence_threshold ?? 0.4,
+  } as NonNullable<ProgramPolicy["handoff_policy"]>;
+  return merged;
+}
+
+function draftFromProgram(program: Program): BuilderDraft {
+  const policy = normalizePolicy(program);
+  return {
+    mode: String(policy.mode ?? DEFAULT_DRAFT.mode),
+    requiredFor: joinList(policy.verification_policy?.required_for),
+    allowedIdentifiers: joinList(policy.verification_policy?.allowed_identifiers),
+    liveTriggers: joinList(policy.escalation_policy?.live_triggers),
+    callbackTriggers: joinList(policy.escalation_policy?.callback_triggers),
+    callbackOnUnavailable: Boolean(policy.escalation_policy?.callback_when_unavailable ?? true),
+    lowConfidenceThreshold: Number(policy.confidence_policy?.escalate_threshold ?? DEFAULT_DRAFT.lowConfidenceThreshold),
+    allowedDocumentTypes: joinList(policy.kb_policy?.allowed_document_types),
+    allowedIntents: joinList(policy.kb_policy?.allowed_intents),
+    enabledTools: joinList(policy.tool_policy?.enabled_tools),
+    supportedChannels: joinList(policy.queue_policy?.supported_channels),
+    tone: String(policy.response_style?.tone ?? DEFAULT_DRAFT.tone),
+    length: String(policy.response_style?.length ?? DEFAULT_DRAFT.length),
+    languagePolicy: String(policy.response_style?.language_policy ?? DEFAULT_DRAFT.languagePolicy),
+    askOneQuestionAtATime: Boolean(policy.response_style?.ask_one_question_at_a_time ?? true),
+    confirmCriticalDetails: Boolean(policy.response_style?.confirm_critical_details ?? true),
+    summaryBeforeHandoff: Boolean(policy.escalation_policy?.require_summary_before_handoff ?? true),
+  };
+}
+
+function policyFromDraft(program: Program, draft: BuilderDraft): ProgramPolicy {
+  const current = normalizePolicy(program);
+  return {
+    ...current,
+    mode: draft.mode,
+    verification_policy: {
+      required_for: splitList(draft.requiredFor),
+      allowed_identifiers: splitList(draft.allowedIdentifiers),
+    },
+    confidence_policy: {
+      answer_threshold: current.confidence_policy?.answer_threshold ?? 0.8,
+      clarify_threshold: current.confidence_policy?.clarify_threshold ?? 0.55,
+      escalate_threshold: draft.lowConfidenceThreshold,
+      max_clarify_turns: current.confidence_policy?.max_clarify_turns ?? 1,
+    },
+    escalation_policy: {
+      live_triggers: splitList(draft.liveTriggers),
+      callback_when_unavailable: draft.callbackOnUnavailable,
+      callback_triggers: splitList(draft.callbackTriggers),
+      require_summary_before_handoff: draft.summaryBeforeHandoff,
+    },
+    kb_policy: {
+      allowed_document_types: splitList(draft.allowedDocumentTypes),
+      allowed_intents: splitList(draft.allowedIntents),
+      must_be_approved: true,
+      match_same_program_only: true,
+    },
+    tool_policy: {
+      enabled_tools: splitList(draft.enabledTools),
+    },
+    response_style: {
+      tone: draft.tone,
+      length: draft.length,
+      language_policy: draft.languagePolicy,
+      ask_one_question_at_a_time: draft.askOneQuestionAtATime,
+      confirm_critical_details: draft.confirmCriticalDetails,
+    },
+    queue_policy: {
+      live_handoff_enabled: true,
+      callback_enabled: true,
+      supported_channels: splitList(draft.supportedChannels),
+    },
+  };
+}
+
+function pill(label: string, value: string) {
+  return (
+    <span className="badge badge-default" style={{ fontSize: "0.74rem" }}>
+      {label}: {value}
+    </span>
+  );
+}
+
+function buildValidationFindings(policy: ProgramPolicy): ValidationFinding[] {
+  const findings: ValidationFinding[] = [];
+  const mode = String(policy.mode ?? "ai_first_then_human");
+  const channels = policy.queue_policy?.supported_channels ?? [];
+  const liveTriggers = policy.escalation_policy?.live_triggers ?? [];
+  const callbackTriggers = policy.escalation_policy?.callback_triggers ?? [];
+  const kbIntents = policy.kb_policy?.allowed_intents ?? [];
+  const kbDocs = policy.kb_policy?.allowed_document_types ?? [];
+  const verifiedFor = policy.verification_policy?.required_for ?? [];
+  const threshold = policy.confidence_policy?.escalate_threshold ?? 0.4;
+
+  findings.push({
+    kind: "success",
+    title: "Operating mode",
+    detail:
+      mode === "ai_only"
+        ? "AI answers every supported request and never hands off to a human."
+        : mode === "callback_only"
+          ? "The system prefers callback fallback instead of live handoff when escalation is needed."
+          : "AI handles the call first and escalates to a human only on approved triggers.",
+  });
+
+  findings.push({
+    kind: channels.length > 0 ? "success" : "warning",
+    title: "Supported channels",
+    detail: channels.length > 0 ? channels.join(", ") : "No channels selected, so the program cannot be routed safely.",
+  });
+
+  findings.push({
+    kind: verifiedFor.length > 0 ? "info" : "warning",
+    title: "Verification scope",
+    detail:
+      verifiedFor.length > 0
+        ? `Verification is required for ${verifiedFor.join(", ")} using ${policy.verification_policy?.allowed_identifiers?.join(", ") || "no identifiers yet"}.`
+        : "No intents require verification yet, which may be too loose for some programs.",
+  });
+
+  findings.push({
+    kind: kbIntents.length > 0 && kbDocs.length > 0 ? "success" : "warning",
+    title: "KB access",
+    detail:
+      kbIntents.length > 0 && kbDocs.length > 0
+        ? `KB answers are limited to ${kbIntents.join(", ")} using ${kbDocs.join(", ")} documents.`
+        : "KB scope is incomplete, so the agent may have nothing approved to cite.",
+  });
+
+  findings.push({
+    kind: liveTriggers.length > 0 ? "success" : "warning",
+    title: "Live handoff",
+    detail:
+      liveTriggers.length > 0
+        ? `Human escalation is triggered by ${liveTriggers.join(", ")}.`
+        : "No live handoff triggers are set, so the agent cannot escalate cleanly.",
+  });
+
+  findings.push({
+    kind: callbackTriggers.length > 0 ? "info" : "warning",
+    title: "Callback fallback",
+    detail:
+      callbackTriggers.length > 0
+        ? `Callback fallback is enabled for ${callbackTriggers.join(", ")}.`
+        : "Callback fallback is not configured yet, so unavailable-agent cases need attention.",
+  });
+
+  findings.push({
+    kind: threshold < 0.25 || threshold > 0.75 ? "warning" : "info",
+    title: "Confidence threshold",
+    detail:
+      threshold < 0.25
+        ? `Escalation starts very late at ${threshold.toFixed(2)} and may keep callers waiting.`
+        : threshold > 0.75
+          ? `Escalation starts very early at ${threshold.toFixed(2)} and may hand off too quickly.`
+          : `Escalation starts at ${threshold.toFixed(2)}, which is a balanced middle ground.`,
+  });
+
+  if (policy.escalation_policy?.require_summary_before_handoff) {
+    findings.push({
+      kind: "success",
+      title: "Handoff package",
+      detail: "The agent will summarize the conversation before a human joins.",
+    });
+  }
+
+  return findings;
+}
+
+function findingsFromRuntime(runtime: ProgramPolicyRuntime | null): ValidationFinding[] {
+  if (!runtime) return [];
+  const findings: ValidationFinding[] = [];
+  const mode = runtime.mode;
+  const channels = runtime.queue_policy?.supported_channels ?? [];
+  const liveTriggers = runtime.escalation_policy?.live_triggers ?? [];
+  const callbackTriggers = runtime.escalation_policy?.callback_triggers ?? [];
+  const kbIntents = runtime.kb_policy?.allowed_intents ?? [];
+  const kbDocs = runtime.kb_policy?.allowed_document_types ?? [];
+  const verifiedFor = runtime.verification_policy?.required_for ?? [];
+  const threshold = runtime.confidence_policy?.escalate_threshold ?? 0.4;
+
+  findings.push({
+    kind: "success",
+    title: "Runtime mode",
+    detail:
+      mode === "ai_only"
+        ? "Live engine will keep the call AI-only."
+        : mode === "callback_only"
+          ? "Live engine will fall back to callback routing when escalation is needed."
+          : "Live engine will start with AI and escalate only on approved triggers.",
+  });
+  findings.push({
+    kind: channels.length > 0 ? "success" : "warning",
+    title: "Runtime channels",
+    detail: channels.length > 0 ? channels.join(", ") : "No runtime channels are enabled.",
+  });
+  findings.push({
+    kind: verifiedFor.length > 0 ? "info" : "warning",
+    title: "Runtime verification",
+    detail: verifiedFor.length > 0 ? `Verification required for ${verifiedFor.join(", ")}.` : "No intents require verification at runtime.",
+  });
+  findings.push({
+    kind: kbIntents.length > 0 && kbDocs.length > 0 ? "success" : "warning",
+    title: "Runtime KB",
+    detail: kbIntents.length > 0 && kbDocs.length > 0 ? `KB answers are limited to ${kbIntents.join(", ")}.` : "KB answering is effectively disabled at runtime.",
+  });
+  findings.push({
+    kind: liveTriggers.length > 0 ? "success" : "warning",
+    title: "Runtime live handoff",
+    detail: liveTriggers.length > 0 ? `Live escalation triggers: ${liveTriggers.join(", ")}.` : "No live escalation triggers are enabled.",
+  });
+  findings.push({
+    kind: callbackTriggers.length > 0 ? "info" : "warning",
+    title: "Runtime callback fallback",
+    detail: callbackTriggers.length > 0 ? `Callback triggers: ${callbackTriggers.join(", ")}.` : "No callback triggers are configured.",
+  });
+  findings.push({
+    kind: threshold < 0.25 || threshold > 0.75 ? "warning" : "info",
+    title: "Runtime threshold",
+    detail:
+      threshold < 0.25
+        ? `Escalation threshold is very low (${threshold.toFixed(2)}).`
+        : threshold > 0.75
+          ? `Escalation threshold is very high (${threshold.toFixed(2)}).`
+          : `Escalation threshold is ${threshold.toFixed(2)}.`,
+  });
+  if (runtime.warnings.length) {
+    for (const warning of runtime.warnings) {
+      findings.push({ kind: "warning", title: "Backend warning", detail: warning });
+    }
+  }
+  return findings;
+}
+
+export function AgentBuilderForm({ orgName, programs }: Props) {
+  const [items, setItems] = useState(programs);
+  const [selectedProgramId, setSelectedProgramId] = useState(programs[0]?.id ?? "");
+  const [drafts, setDrafts] = useState<Record<string, BuilderDraft>>({});
+  const [status, setStatus] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [runtime, setRuntime] = useState<ProgramPolicyRuntime | null>(null);
+  const [runtimeStatus, setRuntimeStatus] = useState<string | null>(null);
+
+  const selectedProgram = useMemo(() => items.find((program) => program.id === selectedProgramId) ?? items[0], [items, selectedProgramId]);
+  const draft = selectedProgram ? (drafts[selectedProgram.id] ?? draftFromProgram(selectedProgram)) : DEFAULT_DRAFT;
+  const previewPolicy = selectedProgram ? policyFromDraft(selectedProgram, draft) : basePolicy();
+  const previewFindings = selectedProgram ? buildValidationFindings(policyFromDraft(selectedProgram, draft)) : [];
+  const runtimeFindings = useMemo(() => findingsFromRuntime(runtime), [runtime]);
+
+  useEffect(() => {
+    if (!selectedProgram) return;
+    let cancelled = false;
+    fetch(`/api/programs/${selectedProgram.id}/policy/runtime`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Runtime fetch failed (${response.status})`);
+        }
+        return (await response.json()) as ProgramPolicyRuntime;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setRuntime(data);
+        setRuntimeStatus(null);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setRuntime(null);
+        setRuntimeStatus(error instanceof Error ? error.message : "Runtime fetch failed");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProgram]);
+
+  function selectProgram(programId: string) {
+    setSelectedProgramId(programId);
+    setStatus(null);
+    setRuntime(null);
+    setRuntimeStatus(null);
+    const program = items.find((item) => item.id === programId);
+    if (program) {
+      setDrafts((prev) => (prev[programId] ? prev : { ...prev, [programId]: draftFromProgram(program) }));
+    }
+  }
+
+  function updateDraft(patch: Partial<BuilderDraft>) {
+    if (!selectedProgram) return;
+    setStatus(null);
+    setDrafts((prev) => ({
+      ...prev,
+      [selectedProgram.id]: {
+        ...(prev[selectedProgram.id] ?? draftFromProgram(selectedProgram)),
+        ...patch,
+      },
+    }));
+  }
+
+  async function savePolicy() {
+    if (!selectedProgram) return;
+    setSaving(true);
+    setStatus(null);
+    try {
+      const response = await fetch(`/api/programs/${selectedProgram.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ policy_json: policyFromDraft(selectedProgram, draft), policy_status: "active" }),
+      });
+      if (!response.ok) {
+        throw new Error(`Save failed (${response.status})`);
+      }
+      const updated = (await response.json()) as Program;
+      setItems((prev) => prev.map((program) => (program.id === updated.id ? updated : program)));
+      setDrafts((prev) => ({ ...prev, [updated.id]: draftFromProgram(updated) }));
+      setStatus("Saved and published to the live policy engine.");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const current = selectedProgram;
+  const preview = previewPolicy;
+
+  if (!current) {
+    return (
+      <div className="page-content">
+        <div className="panel">
+          <div className="panel-header">
+            <span className="panel-title">Agent Builder</span>
+          </div>
+          <div style={{ padding: 16 }}>No client programs are available yet for {orgName}.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page-content">
+      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 14 }}>
+        <h2 style={{ margin: 0, fontFamily: "var(--font-display)", fontSize: "1.45rem", color: "var(--ink)" }}>Agent Builder</h2>
+        <p style={{ margin: 0, color: "var(--muted)", fontSize: "0.88rem", lineHeight: 1.5, maxWidth: 900 }}>
+          Configure how the AI handles calls for {orgName}. Program owners can decide what the agent can answer, which KB documents it can use, when to verify callers, and when to hand off to a human.
+        </p>
+      </div>
+
+      <div className="panel" style={{ marginBottom: 14 }}>
+        <div className="panel-header">
+          <span className="panel-title">Program scope</span>
+        </div>
+        <div style={{ padding: 16, display: "grid", gap: 12 }}>
+          <div style={{ display: "grid", gap: 8, gridTemplateColumns: "minmax(220px, 360px) repeat(auto-fit, minmax(140px, max-content))" }}>
+            <select
+              value={current.id}
+              onChange={(e) => selectProgram(e.target.value)}
+              style={{ padding: "10px 12px", borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)", background: "white" }}
+            >
+              {items.map((program) => <option key={program.id} value={program.id}>{program.name}</option>)}
+            </select>
+            {pill("Version", String(current.policy_version ?? 1))}
+            {pill("Status", String(current.policy_status ?? "active"))}
+            {pill("Languages", current.languages.join(" / "))}
+          </div>
+          <div className="row-meta" style={{ gap: 10 }}>
+            <span>Updated by: {current.policy_updated_by ?? "system"}</span>
+            <span>Last publish: {current.policy_updated_at ? new Date(current.policy_updated_at).toLocaleString() : "Never"}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="double-grid" style={{ alignItems: "start" }}>
+        <div style={{ display: "grid", gap: 14 }}>
+          <div className="panel">
+            <div className="panel-header"><span className="panel-title">Agent mode</span></div>
+            <div style={{ padding: 16, display: "grid", gap: 12 }}>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Operating mode</span>
+                <select value={draft.mode} onChange={(e) => updateDraft({ mode: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
+                  <option value="ai_first_then_human">AI first, then human on approved triggers</option>
+                  <option value="ai_only">AI only</option>
+                  <option value="callback_only">Callback only fallback</option>
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Supported channels</span>
+                <input value={draft.supportedChannels} onChange={(e) => updateDraft({ supportedChannels: e.target.value })} placeholder="phone, browser" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+              </label>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-header"><span className="panel-title">Caller verification</span></div>
+            <div style={{ padding: 16, display: "grid", gap: 12 }}>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Required for intents</span>
+                <input value={draft.requiredFor} onChange={(e) => updateDraft({ requiredFor: e.target.value })} placeholder="case_status" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Allowed identifiers</span>
+                <input value={draft.allowedIdentifiers} onChange={(e) => updateDraft({ allowedIdentifiers: e.target.value })} placeholder="customer_code, last4_phone" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Low confidence threshold</span>
+                <input type="number" min="0" max="1" step="0.05" value={draft.lowConfidenceThreshold} onChange={(e) => updateDraft({ lowConfidenceThreshold: Number(e.target.value) })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+              </label>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-header"><span className="panel-title">Escalation rules</span></div>
+            <div style={{ padding: 16, display: "grid", gap: 12 }}>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Live handoff triggers</span>
+                <input value={draft.liveTriggers} onChange={(e) => updateDraft({ liveTriggers: e.target.value })} placeholder="human_request, angry, verification_failures" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Callback triggers</span>
+                <input value={draft.callbackTriggers} onChange={(e) => updateDraft({ callbackTriggers: e.target.value })} placeholder="no_agent_available, callback_request" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input type="checkbox" checked={draft.callbackOnUnavailable} onChange={(e) => updateDraft({ callbackOnUnavailable: e.target.checked })} />
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Queue callback when no agent is available</span>
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input type="checkbox" checked={draft.summaryBeforeHandoff} onChange={(e) => updateDraft({ summaryBeforeHandoff: e.target.checked })} />
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Require summary before handoff</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gap: 14 }}>
+          <div className="panel">
+            <div className="panel-header"><span className="panel-title">Knowledge base scope</span></div>
+            <div style={{ padding: 16, display: "grid", gap: 12 }}>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Allowed document types</span>
+                <input value={draft.allowedDocumentTypes} onChange={(e) => updateDraft({ allowedDocumentTypes: e.target.value })} placeholder="faq, policy, procedure" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Allowed intents for KB answers</span>
+                <input value={draft.allowedIntents} onChange={(e) => updateDraft({ allowedIntents: e.target.value })} placeholder="faq_answer, case_status" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+              </label>
+              <div className="row-meta" style={{ gap: 10 }}>
+                <span>Approved only</span>
+                <span>Match same program only</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-header"><span className="panel-title">Tools and response style</span></div>
+            <div style={{ padding: 16, display: "grid", gap: 12 }}>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Enabled tools</span>
+                <input value={draft.enabledTools} onChange={(e) => updateDraft({ enabledTools: e.target.value })} placeholder="lookup_case, create_ticket" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Tone</span>
+                <select value={draft.tone} onChange={(e) => updateDraft({ tone: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
+                  <option value="calm">Calm</option>
+                  <option value="warm">Warm</option>
+                  <option value="formal">Formal</option>
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Length</span>
+                <select value={draft.length} onChange={(e) => updateDraft({ length: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
+                  <option value="short">Short</option>
+                  <option value="medium">Medium</option>
+                </select>
+              </label>
+              <label style={{ display: "grid", gap: 6 }}>
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Language policy</span>
+                <select value={draft.languagePolicy} onChange={(e) => updateDraft({ languagePolicy: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
+                  <option value="match_caller">Match caller language</option>
+                  <option value="english_first">English first</option>
+                </select>
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input type="checkbox" checked={draft.askOneQuestionAtATime} onChange={(e) => updateDraft({ askOneQuestionAtATime: e.target.checked })} />
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Ask one question at a time</span>
+              </label>
+              <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input type="checkbox" checked={draft.confirmCriticalDetails} onChange={(e) => updateDraft({ confirmCriticalDetails: e.target.checked })} />
+                <span style={{ fontWeight: 600, fontSize: 12 }}>Confirm critical details</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-header"><span className="panel-title">Policy preview</span></div>
+            <div style={{ padding: 16 }}>
+              <pre style={{ margin: 0, padding: 12, overflowX: "auto", borderRadius: 12, background: "rgba(28,42,43,0.04)", fontSize: 12, lineHeight: 1.5 }}>
+                {JSON.stringify(preview, null, 2)}
+              </pre>
+            </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+              <span className="panel-title">Live validation</span>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>
+                {runtimeStatus ?? (runtime ? "Live policy loaded from backend" : "Loading live policy...")}
+              </span>
+            </div>
+            <div style={{ padding: 16, display: "grid", gap: 10 }}>
+              <div className="row-meta" style={{ gap: 10 }}>
+                <span>UI draft warnings: {previewFindings.filter((finding) => finding.kind === "warning").length}</span>
+                <span>Backend warnings: {runtimeFindings.filter((finding) => finding.kind === "warning").length}</span>
+              </div>
+              <div style={{ display: "grid", gap: 10 }}>
+                {runtimeFindings.map((finding) => (
+                  <div
+                    key={`${finding.title}-${finding.detail}`}
+                    style={{
+                      padding: 12,
+                      borderRadius: 12,
+                      border: "1px solid rgba(28,42,43,0.10)",
+                      background:
+                        finding.kind === "warning"
+                          ? "rgba(239,68,68,0.06)"
+                          : finding.kind === "success"
+                            ? "rgba(16,185,129,0.06)"
+                            : "rgba(59,130,246,0.06)",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
+                      <strong style={{ fontSize: 13 }}>{finding.title}</strong>
+                      <span style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", color: finding.kind === "warning" ? "var(--danger)" : finding.kind === "success" ? "var(--success)" : "var(--muted)" }}>
+                        {finding.kind}
+                      </span>
+                    </div>
+                    <p style={{ margin: "6px 0 0", fontSize: 13, lineHeight: 1.45, color: "var(--muted)" }}>{finding.detail}</p>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted)" }}>
+                Backend runtime is the source of truth for live calls. Draft preview shows what will be published next.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 14 }}>
+        <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--muted)" }}>
+          Changes publish to new calls immediately and are mirrored into the legacy verification and handoff fields for compatibility.
+        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {status && <span style={{ color: status.startsWith("Saved") ? "var(--success)" : "var(--danger)", fontSize: 13, fontWeight: 600 }}>{status}</span>}
+          <button
+            onClick={savePolicy}
+            disabled={saving}
+            style={{
+              border: "none",
+              borderRadius: 10,
+              padding: "10px 18px",
+              background: saving ? "rgba(15,123,119,0.45)" : "var(--accent)",
+              color: "white",
+              fontWeight: 700,
+              cursor: saving ? "not-allowed" : "pointer",
+            }}
+          >
+            {saving ? "Saving..." : "Publish policy"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

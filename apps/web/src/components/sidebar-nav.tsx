@@ -7,7 +7,7 @@ type NavItem = {
   href: string;
   label: string;
   hint: string;
-  icon: "overview" | "calls" | "callbacks" | "reviews" | "programs" | "knowledge" | "tickets" | "customers" | "analytics" | "settings" | "voicelab" | "campaigns" | "squad" | "twilio";
+  icon: "overview" | "calls" | "callbacks" | "reviews" | "programs" | "knowledge" | "tickets" | "customers" | "analytics" | "builder" | "voicelab" | "campaigns" | "squad" | "twilio";
   badgeKey?: "live_calls" | "callbacks_pending" | "qa_pending";
 };
 
@@ -43,7 +43,7 @@ const navGroups: NavGroup[] = [
     label: "ADMIN",
     items: [
       { href: "/analytics", label: "Analytics", hint: "Resolution rates and trends", icon: "analytics" },
-      { href: "/settings", label: "Settings", hint: "AI policy and notifications", icon: "settings" },
+      { href: "/agent-builder", label: "Agent Builder", hint: "Policy, KB, and escalation controls", icon: "builder" },
     ],
   },
 ];
@@ -70,8 +70,8 @@ function NavIcon({ icon }: { icon: NavItem["icon"] }) {
       return <svg viewBox="0 0 20 20" aria-hidden><path d="M4 15h2V8H4zm5 0h2V5H9zm5 0h2V10h-2zM3 17h14v1H3z" /></svg>;
     case "campaigns":
       return <svg viewBox="0 0 20 20" aria-hidden><path d="M3 10a7 7 0 1 0 14 0A7 7 0 0 0 3 10zm5-1h4v2H8zm-2 4h8v1H6zm1-7h6l-1 2H8z" /></svg>;
-    case "settings":
-      return <svg viewBox="0 0 20 20" aria-hidden><path d="M8.5 2h3l.5 2a6 6 0 0 1 1.7 1l2-.5 1.5 2.6-1.5 1.5a6 6 0 0 1 0 2l1.5 1.5-1.5 2.6-2-.5A6 6 0 0 1 12 16l-.5 2h-3L8 16a6 6 0 0 1-1.7-1l-2 .5L2.8 13l1.5-1.5a6 6 0 0 1 0-2L2.8 8 4.3 5.4l2 .5A6 6 0 0 1 8 4l.5-2zM10 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" /></svg>;
+    case "builder":
+      return <svg viewBox="0 0 20 20" aria-hidden><path d="M3 5h14v2H3zm0 4h14v2H3zm0 4h9v2H3zM14.4 11.8l1.8 1.8 1.8-1.8a1 1 0 0 0 0-1.4l-1.2-1.2a1 1 0 0 0-1.4 0l-1.8 1.8zM13 13.2 11.2 15H10v-1.2l1.8-1.8z" /></svg>;
     case "voicelab":
       return <svg viewBox="0 0 20 20" aria-hidden><path d="M10 2a2 2 0 0 1 2 2v6a2 2 0 0 1-4 0V4a2 2 0 0 1 2-2zm-5 6a5 5 0 0 0 10 0h-2a3 3 0 0 1-6 0zm5 7v3h-2v-3a7 7 0 0 1-5.4-4.5l1.9-.7A5 5 0 0 0 15 12.8l1.9.7A7 7 0 0 1 10 15z" /></svg>;
     case "squad":

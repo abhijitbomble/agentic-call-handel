@@ -32,6 +32,7 @@ export type ProgramPolicy = {
     on_silent_user: string;
   };
   verification_policy?: ProgramVerificationPolicy;
+  handoff_policy?: ProgramHandoffPolicy;
   escalation_policy?: {
     live_triggers: string[];
     callback_when_unavailable: boolean;
@@ -60,6 +61,59 @@ export type ProgramPolicy = {
     supported_channels: string[];
   };
   [key: string]: unknown;
+};
+
+export type ProgramPolicyRuntime = {
+  mode: string;
+  intent_policy: {
+    allowed_intents: string[];
+    blocked_intents: string[];
+    default_intent: string;
+  };
+  verification_policy: {
+    required_for: string[];
+    allowed_identifiers: string[];
+  };
+  confidence_policy: {
+    answer_threshold: number;
+    clarify_threshold: number;
+    escalate_threshold: number;
+    max_clarify_turns: number;
+  };
+  fallback_policy: {
+    on_low_confidence: string;
+    on_no_kb_match: string;
+    on_missing_required_data: string;
+    on_silent_user: string;
+  };
+  escalation_policy: {
+    live_triggers: string[];
+    callback_when_unavailable: boolean;
+    callback_triggers: string[];
+    require_summary_before_handoff: boolean;
+  };
+  kb_policy: {
+    allowed_document_types: string[];
+    allowed_intents: string[];
+    must_be_approved: boolean;
+    match_same_program_only: boolean;
+  };
+  tool_policy: {
+    enabled_tools: string[];
+  };
+  response_style: {
+    tone: string;
+    length: string;
+    language_policy: string;
+    ask_one_question_at_a_time: boolean;
+    confirm_critical_details: boolean;
+  };
+  queue_policy: {
+    supported_channels: string[];
+    live_handoff_enabled: boolean;
+    callback_enabled: boolean;
+  };
+  warnings: string[];
 };
 
 export type Organization = {

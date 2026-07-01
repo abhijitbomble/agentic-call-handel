@@ -34,6 +34,7 @@ from app.schemas import (
     LoginRequest,
     OrganizationRead,
     ProgramPolicyUpdateRequest,
+    ProgramPolicyRuntimeRead,
     ProgramRead,
     QAReviewRead,
     QueueRead,
@@ -56,7 +57,7 @@ from app.schemas import (
 from app.orchestrator import agent_pool
 from app.migrations import ensure_program_policy_schema
 from app.seed import seed_database
-from app.services import SessionEngine, build_analytics_snapshot, emit_events, store_audit_log, update_program_policy
+from app.services import SessionEngine, build_analytics_snapshot, emit_events, policy_runtime_summary, policy_warnings_for, store_audit_log, update_program_policy
 from app.twilio_media import run_twilio_media_bridge
 from app.twilio_browser import browser_identity, create_voice_access_token
 from app import twilio_handler as twiml
@@ -203,6 +204,22 @@ def update_program(
     db.commit()
     db.refresh(program)
     return program
+
+
+@app.get("/programs/{program_id}/policy/runtime", response_model=ProgramPolicyRuntimeRead)
+def get_program_policy_runtime(
+    program_id: str,
+    ctx: AuthContext = Depends(get_current_context),
+    db: Session = Depends(get_db),
+):
+    program = db.get(ClientProgram, program_id)
+    if program is None or program.organization_id != ctx.membership.organization_id:
+        raise HTTPException(status_code=404, detail="Program not found")
+    if ctx.membership.client_program_id and program.id != ctx.membership.client_program_id:
+        raise HTTPException(status_code=403, detail="Cannot inspect a different program")
+    runtime = policy_runtime_summary(program)
+    runtime["warnings"] = policy_warnings_for(program)
+    return runtime
 
 
 @app.get("/queues", response_model=list[QueueRead])

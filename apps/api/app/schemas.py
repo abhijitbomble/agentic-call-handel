@@ -53,6 +53,20 @@ class ProgramPolicyUpdateRequest(BaseModel):
     policy_status: str | None = None
 
 
+class ProgramPolicyRuntimeRead(BaseModel):
+    mode: str
+    intent_policy: dict[str, Any]
+    verification_policy: dict[str, Any]
+    confidence_policy: dict[str, Any]
+    fallback_policy: dict[str, Any]
+    escalation_policy: dict[str, Any]
+    kb_policy: dict[str, Any]
+    tool_policy: dict[str, Any]
+    response_style: dict[str, Any]
+    queue_policy: dict[str, Any]
+    warnings: list[str]
+
+
 class QueueRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
