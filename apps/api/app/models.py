@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,6 +35,11 @@ class ClientProgram(TimestampMixin, Base):
     languages: Mapped[list[str]] = mapped_column(JSON, default=list)
     verification_policy: Mapped[dict] = mapped_column(JSON, default=dict)
     handoff_policy: Mapped[dict] = mapped_column(JSON, default=dict)
+    policy_version: Mapped[int] = mapped_column(Integer, default=1)
+    policy_status: Mapped[str] = mapped_column(String(20), default="active")
+    policy_json: Mapped[dict] = mapped_column(JSON, default=dict)
+    policy_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    policy_updated_by: Mapped[str | None] = mapped_column(ForeignKey("staff_users.id"), nullable=True)
     disclosure_template_en: Mapped[str] = mapped_column(Text, default="")
     disclosure_template_hi: Mapped[str] = mapped_column(Text, default="")
 

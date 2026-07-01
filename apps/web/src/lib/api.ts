@@ -1,4 +1,4 @@
-﻿import { backendRequest } from "@/lib/backend-proxy";
+import { backendRequest } from "@/lib/backend-proxy";
 import type {
   AnalyticsSnapshot,
   Call,
@@ -125,6 +125,16 @@ export async function getOrganizations(): Promise<Organization[]> {
 
 export async function getPrograms(): Promise<Program[]> {
   return backendRequest<Program[]>("/programs");
+}
+
+export async function updateProgramPolicy(
+  programId: string,
+  payload: { policy_json: import("@/lib/types").ProgramPolicy; policy_status?: string },
+): Promise<Program> {
+  return backendRequest<Program>(`/programs/${programId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function getQueues(): Promise<Queue[]> {

@@ -213,18 +213,122 @@ DEFAULT_HANDOFF_POLICY = {
     "low_confidence_threshold": 0.7,
 }
 
+DEFAULT_PROGRAM_POLICY = {
+    "version": 1,
+    "mode": "ai_first_then_human",
+    "intent_policy": {
+        "allowed_intents": [
+            "greeting",
+            "faq_answer",
+            "case_status",
+            "policy_query",
+            "payment_issue",
+            "complaint",
+            "callback_request",
+            "human_transfer",
+            "verification",
+        ],
+        "default_intent": "unknown_needs_clarification",
+        "blocked_intents": [],
+    },
+    "confidence_policy": {
+        "answer_threshold": 0.8,
+        "clarify_threshold": 0.55,
+        "escalate_threshold": 0.4,
+        "max_clarify_turns": 1,
+    },
+    "fallback_policy": {
+        "on_low_confidence": "clarify_then_escalate",
+        "on_no_kb_match": "ask_clarify",
+        "on_missing_required_data": "ask_one_question",
+        "on_silent_user": "repeat_prompt_once",
+    },
+    "verification_policy": DEFAULT_VERIFICATION_POLICY,
+    "escalation_policy": {
+        "live_triggers": ["human_request", "angry", "verification_failures", "low_confidence", "high_risk"],
+        "callback_when_unavailable": True,
+        "callback_triggers": ["no_agent_available", "outside_business_hours", "callback_request", "low_confidence"],
+        "require_summary_before_handoff": True,
+    },
+    "kb_policy": {
+        "allowed_document_types": ["faq", "policy", "procedure"],
+        "allowed_intents": ["faq_answer", "case_status", "policy_query", "payment_issue"],
+        "must_be_approved": True,
+        "match_same_program_only": True,
+    },
+    "tool_policy": {
+        "enabled_tools": ["lookup_case", "create_ticket", "create_callback", "request_handoff", "verify_customer"],
+    },
+    "response_style": {
+        "tone": "calm",
+        "length": "short",
+        "language_policy": "match_caller",
+        "ask_one_question_at_a_time": True,
+        "confirm_critical_details": True,
+    },
+    "queue_policy": {
+        "live_handoff_enabled": True,
+        "callback_enabled": True,
+        "supported_channels": ["phone", "browser"],
+    },
+}
+
+
+def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    result = json.loads(json.dumps(base))
+    for key, value in override.items():
+        if isinstance(result.get(key), dict) and isinstance(value, dict):
+            result[key] = _deep_merge(result[key], value)
+        else:
+            result[key] = value
+    return result
+
+
+def program_policy(program: ClientProgram) -> dict[str, Any]:
+    policy = json.loads(json.dumps(DEFAULT_PROGRAM_POLICY))
+    if isinstance(program.policy_json, dict) and program.policy_json:
+        policy = _deep_merge(policy, program.policy_json)
+
+    legacy_verification = program.verification_policy if isinstance(program.verification_policy, dict) else {}
+    if legacy_verification:
+        policy["verification_policy"] = {**policy.get("verification_policy", {}), **legacy_verification}
+
+    legacy_handoff = program.handoff_policy if isinstance(program.handoff_policy, dict) else {}
+    if legacy_handoff:
+        policy["handoff_policy"] = {**policy.get("handoff_policy", {}), **legacy_handoff}
+        escalation_policy = policy.get("escalation_policy", {})
+        if isinstance(escalation_policy, dict):
+            escalation_policy.setdefault("live_triggers", legacy_handoff.get("live_on", []))
+            escalation_policy.setdefault("callback_when_unavailable", legacy_handoff.get("callback_on_unavailable", True))
+            if "low_confidence_threshold" in legacy_handoff:
+                escalation_policy.setdefault("low_confidence_threshold", legacy_handoff["low_confidence_threshold"])
+            policy["escalation_policy"] = escalation_policy
+
+    if "handoff_policy" not in policy or not isinstance(policy.get("handoff_policy"), dict):
+        escalation_policy = policy.get("escalation_policy", {}) if isinstance(policy.get("escalation_policy"), dict) else {}
+        confidence_policy = policy.get("confidence_policy", {}) if isinstance(policy.get("confidence_policy"), dict) else {}
+        policy["handoff_policy"] = {
+            "live_on": list(escalation_policy.get("live_triggers", DEFAULT_HANDOFF_POLICY["live_on"])),
+            "callback_on_unavailable": bool(escalation_policy.get("callback_when_unavailable", True)),
+            "low_confidence_threshold": float(confidence_policy.get("escalate_threshold", DEFAULT_HANDOFF_POLICY["low_confidence_threshold"])),
+        }
+
+    return policy
+
 
 def merged_verification_policy(program: ClientProgram) -> dict[str, Any]:
+    policy = program_policy(program)
     return {
         **DEFAULT_VERIFICATION_POLICY,
-        **(program.verification_policy if isinstance(program.verification_policy, dict) else {}),
+        **(policy.get("verification_policy") if isinstance(policy.get("verification_policy"), dict) else {}),
     }
 
 
 def merged_handoff_policy(program: ClientProgram) -> dict[str, Any]:
+    policy = program_policy(program)
     return {
         **DEFAULT_HANDOFF_POLICY,
-        **(program.handoff_policy if isinstance(program.handoff_policy, dict) else {}),
+        **(policy.get("handoff_policy") if isinstance(policy.get("handoff_policy"), dict) else {}),
     }
 
 
@@ -246,17 +350,59 @@ def verification_identifiers_for(program: ClientProgram) -> list[str]:
 
 
 def handoff_live_triggers_for(program: ClientProgram) -> set[str]:
-    policy = merged_handoff_policy(program)
-    return set(policy_list(policy, "live_on", DEFAULT_HANDOFF_POLICY["live_on"]))
+    policy = program_policy(program)
+    escalation = policy.get("escalation_policy", {}) if isinstance(policy.get("escalation_policy"), dict) else {}
+    live_triggers = escalation.get("live_triggers")
+    if isinstance(live_triggers, list) and live_triggers:
+        return set(policy_list(escalation, "live_triggers", DEFAULT_HANDOFF_POLICY["live_on"]))
+    legacy = merged_handoff_policy(program)
+    return set(policy_list(legacy, "live_on", DEFAULT_HANDOFF_POLICY["live_on"]))
 
 
 def low_confidence_threshold_for(program: ClientProgram) -> float:
-    policy = merged_handoff_policy(program)
-    value = policy.get("low_confidence_threshold", DEFAULT_HANDOFF_POLICY["low_confidence_threshold"])
+    policy = program_policy(program)
+    confidence_policy = policy.get("confidence_policy", {}) if isinstance(policy.get("confidence_policy"), dict) else {}
+    value = confidence_policy.get("escalate_threshold", None)
+    if value is None:
+        legacy = merged_handoff_policy(program)
+        value = legacy.get("low_confidence_threshold", DEFAULT_HANDOFF_POLICY["low_confidence_threshold"])
     try:
         return float(value)
     except (TypeError, ValueError):
         return float(DEFAULT_HANDOFF_POLICY["low_confidence_threshold"])
+
+
+def storage_policies_from_program_policy(policy: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+    verification = policy.get("verification_policy", {}) if isinstance(policy.get("verification_policy"), dict) else {}
+    handoff = policy.get("handoff_policy", {}) if isinstance(policy.get("handoff_policy"), dict) else {}
+    if not handoff:
+        escalation_policy = policy.get("escalation_policy", {}) if isinstance(policy.get("escalation_policy"), dict) else {}
+        confidence_policy = policy.get("confidence_policy", {}) if isinstance(policy.get("confidence_policy"), dict) else {}
+        handoff = {
+            "live_on": list(escalation_policy.get("live_triggers", DEFAULT_HANDOFF_POLICY["live_on"])),
+            "callback_on_unavailable": bool(escalation_policy.get("callback_when_unavailable", True)),
+            "low_confidence_threshold": float(confidence_policy.get("escalate_threshold", DEFAULT_HANDOFF_POLICY["low_confidence_threshold"])),
+        }
+    return verification, handoff
+
+
+def update_program_policy(
+    program: ClientProgram,
+    policy_updates: dict[str, Any],
+    *,
+    updated_by: str | None = None,
+    status: str | None = None,
+) -> dict[str, Any]:
+    merged = _deep_merge(program_policy(program), policy_updates if isinstance(policy_updates, dict) else {})
+    verification_policy, handoff_policy = storage_policies_from_program_policy(merged)
+    program.policy_json = merged
+    program.verification_policy = verification_policy
+    program.handoff_policy = handoff_policy
+    program.policy_version = int(program.policy_version or 1) + 1
+    program.policy_status = status or program.policy_status or "active"
+    program.policy_updated_at = datetime.now(timezone.utc)
+    program.policy_updated_by = updated_by
+    return merged
 
 
 def build_verification_prompt(program: ClientProgram) -> str:

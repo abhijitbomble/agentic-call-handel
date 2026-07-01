@@ -151,6 +151,68 @@ def _add_completed_call(
     return call
 
 
+def build_default_program_policy() -> dict:
+    return {
+        "version": 1,
+        "mode": "ai_first_then_human",
+        "intent_policy": {
+            "allowed_intents": [
+                "greeting",
+                "faq_answer",
+                "case_status",
+                "policy_query",
+                "payment_issue",
+                "complaint",
+                "callback_request",
+                "human_transfer",
+                "verification",
+            ],
+            "default_intent": "unknown_needs_clarification",
+            "blocked_intents": [],
+        },
+        "confidence_policy": {
+            "answer_threshold": 0.8,
+            "clarify_threshold": 0.55,
+            "escalate_threshold": 0.4,
+            "max_clarify_turns": 1,
+        },
+        "fallback_policy": {
+            "on_low_confidence": "clarify_then_escalate",
+            "on_no_kb_match": "ask_clarify",
+            "on_missing_required_data": "ask_one_question",
+            "on_silent_user": "repeat_prompt_once",
+        },
+        "verification_policy": {"required_for": ["case_status"], "allowed_identifiers": ["customer_code", "last4_phone"]},
+        "escalation_policy": {
+            "live_triggers": ["human_request", "angry", "verification_failures", "low_confidence", "high_risk"],
+            "callback_when_unavailable": True,
+            "callback_triggers": ["no_agent_available", "outside_business_hours", "callback_request", "low_confidence"],
+            "require_summary_before_handoff": True,
+        },
+        "kb_policy": {
+            "allowed_document_types": ["faq", "policy", "procedure"],
+            "allowed_intents": ["faq_answer", "case_status", "policy_query", "payment_issue"],
+            "must_be_approved": True,
+            "match_same_program_only": True,
+        },
+        "tool_policy": {
+            "enabled_tools": ["lookup_case", "create_ticket", "create_callback", "request_handoff", "verify_customer"],
+        },
+        "response_style": {
+            "tone": "calm",
+            "length": "short",
+            "language_policy": "match_caller",
+            "ask_one_question_at_a_time": True,
+            "confirm_critical_details": True,
+        },
+        "queue_policy": {
+            "live_handoff_enabled": True,
+            "callback_enabled": True,
+            "supported_channels": ["phone", "browser"],
+        },
+    }
+
+
 def seed_database(db: Session) -> None:
     if db.scalar(select(Organization.id)):
         return
@@ -172,6 +234,9 @@ def seed_database(db: Session) -> None:
             languages=["English", "Hindi"],
             verification_policy={"required_for": ["case_status"], "allowed_identifiers": ["customer_code", "last4_phone"]},
             handoff_policy={"live_on": ["human_request", "angry", "verification_failures", "vip"], "callback_on_unavailable": True},
+            policy_version=1,
+            policy_status="active",
+            policy_json=build_default_program_policy(),
             disclosure_template_en="Hello, you are speaking with VoiceOps Control for Acme Insurance. This conversation may be recorded for quality and support. How can I help you today?",
             disclosure_template_hi="Namaste, aap VoiceOps Control se baat kar rahe hain. Yeh call quality aur support ke liye record ho sakti hai. Main aaj aapki kaise madad kar sakta hoon?",
         ),
@@ -183,6 +248,9 @@ def seed_database(db: Session) -> None:
             languages=["English", "Hindi"],
             verification_policy={"required_for": ["case_status"], "allowed_identifiers": ["customer_code", "last4_phone"]},
             handoff_policy={"live_on": ["human_request", "angry", "verification_failures", "vip"], "callback_on_unavailable": True},
+            policy_version=1,
+            policy_status="active",
+            policy_json=build_default_program_policy(),
             disclosure_template_en="Hello, you are speaking with VoiceOps Control for HealthPlus. This conversation may be recorded. What do you need help with today?",
             disclosure_template_hi="Namaste, aap HealthPlus support line par hain. Yeh call record ho sakti hai. Aaj aapko kis madad ki zarurat hai?",
         ),

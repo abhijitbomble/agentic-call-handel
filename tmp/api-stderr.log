@@ -5,3 +5,93 @@ INFO:     Uvicorn running on http://127.0.0.1:8020 (Press CTRL+C to quit)
 INFO:     127.0.0.1:60226 - "WebSocket /ws/customer-call/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJxdWV1ZV9pZCI6Ijg5MWQwM2M1LTc1ODItNGZmOC04YjhkLThhNGRkMDRiYmY0ZiIsInByb2dyYW1faWQiOiJiOTZkYzc0OC04NmIwLTRmMGMtYTFiYy0zNmYxZWE0MzQzZGQiLCJwaG9uZSI6Iis5MTk4NzY1NDMyMTAiLCJsYW5ndWFnZSI6IkVuZ2xpc2giLCJleHAiOjE3ODI3NTI3NzZ9.CrbjohZv68Aq1nZtCZfv9Ax_p4t2Us2dcv4ImvFBVpA" [accepted]
 INFO:     connection open
 INFO:     connection closed
+INFO:     127.0.0.1:59330 - "WebSocket /ws/voice-sessions/fe3b0d4c-e9b9-447c-a1c9-d4f65f024996" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:63774 - "WebSocket /ws/voice-sessions/fe3b0d4c-e9b9-447c-a1c9-d4f65f024996" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:54942 - "WebSocket /ws/voice-sessions/62d67851-5c0a-4d4c-9cfa-9bb8cdba155e" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:55235 - "WebSocket /ws/voice-sessions/cdddd1f1-7e94-4424-a0ba-729adfa016bc" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:65170 - "WebSocket /ws/voice-sessions/bb4990b4-6974-49ff-abce-6774dc44c3d2" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:50070 - "WebSocket /ws/voice-sessions/d13540b5-7150-42df-91ec-243e8aef7280" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:54758 - "WebSocket /ws/voice-sessions/a3472d80-9866-430d-8b09-975e3fd375d3" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61002 - "WebSocket /ws/voice-sessions/2207d02f-6b23-4d5e-a7c6-d5700976bd4e" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:59016 - "WebSocket /ws/voice-sessions/e06f495a-5794-48f7-8e6d-21542dae5b05" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:49880 - "WebSocket /ws/voice-sessions/39f3b1e3-a971-47c6-857e-ee3e1e8bc304" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:59151 - "WebSocket /ws/voice-sessions/fe3b0d4c-e9b9-447c-a1c9-d4f65f024996" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:49950 - "WebSocket /ws/voice-sessions/62d67851-5c0a-4d4c-9cfa-9bb8cdba155e" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:59604 - "WebSocket /ws/voice-sessions/cdddd1f1-7e94-4424-a0ba-729adfa016bc" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:60195 - "WebSocket /ws/voice-sessions/bb4990b4-6974-49ff-abce-6774dc44c3d2" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:57304 - "WebSocket /ws/voice-sessions/a3472d80-9866-430d-8b09-975e3fd375d3" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:49892 - "WebSocket /ws/voice-sessions/d13540b5-7150-42df-91ec-243e8aef7280" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:58565 - "WebSocket /ws/voice-sessions/2207d02f-6b23-4d5e-a7c6-d5700976bd4e" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:57578 - "WebSocket /ws/voice-sessions/39f3b1e3-a971-47c6-857e-ee3e1e8bc304" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:51282 - "WebSocket /ws/voice-sessions/e06f495a-5794-48f7-8e6d-21542dae5b05" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     127.0.0.1:49209 - "WebSocket /ws/voice-sessions/6c6f8eea-b7dc-40bf-a019-37647cd79b90" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:56144 - "WebSocket /ws/voice-sessions/6c6f8eea-b7dc-40bf-a019-37647cd79b90" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61064 - "WebSocket /ws/voice-sessions/fe3b0d4c-e9b9-447c-a1c9-d4f65f024996" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:61902 - "WebSocket /ws/voice-sessions/62d67851-5c0a-4d4c-9cfa-9bb8cdba155e" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:59353 - "WebSocket /ws/voice-sessions/cdddd1f1-7e94-4424-a0ba-729adfa016bc" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:62248 - "WebSocket /ws/voice-sessions/bb4990b4-6974-49ff-abce-6774dc44c3d2" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:56733 - "WebSocket /ws/voice-sessions/a3472d80-9866-430d-8b09-975e3fd375d3" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:56497 - "WebSocket /ws/voice-sessions/2207d02f-6b23-4d5e-a7c6-d5700976bd4e" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:59296 - "WebSocket /ws/voice-sessions/d13540b5-7150-42df-91ec-243e8aef7280" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:60863 - "WebSocket /ws/voice-sessions/39f3b1e3-a971-47c6-857e-ee3e1e8bc304" [accepted]
+INFO:     connection open
+INFO:     127.0.0.1:57188 - "WebSocket /ws/voice-sessions/e06f495a-5794-48f7-8e6d-21542dae5b05" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed
+INFO:     connection closed

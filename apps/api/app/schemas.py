@@ -39,8 +39,18 @@ class ProgramRead(BaseModel):
     languages: list[str]
     verification_policy: dict[str, Any]
     handoff_policy: dict[str, Any]
+    policy_version: int
+    policy_status: str
+    policy_json: dict[str, Any]
+    policy_updated_at: datetime | None
+    policy_updated_by: str | None
     disclosure_template_en: str
     disclosure_template_hi: str
+
+
+class ProgramPolicyUpdateRequest(BaseModel):
+    policy_json: dict[str, Any]
+    policy_status: str | None = None
 
 
 class QueueRead(BaseModel):

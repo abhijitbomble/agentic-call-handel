@@ -11,6 +11,57 @@ export type ProgramHandoffPolicy = {
   [key: string]: unknown;
 };
 
+export type ProgramPolicy = {
+  version?: number;
+  mode?: "ai_first_then_human" | "ai_only" | "callback_only" | string;
+  intent_policy?: {
+    allowed_intents: string[];
+    default_intent: string;
+    blocked_intents: string[];
+  };
+  confidence_policy?: {
+    answer_threshold: number;
+    clarify_threshold: number;
+    escalate_threshold: number;
+    max_clarify_turns: number;
+  };
+  fallback_policy?: {
+    on_low_confidence: string;
+    on_no_kb_match: string;
+    on_missing_required_data: string;
+    on_silent_user: string;
+  };
+  verification_policy?: ProgramVerificationPolicy;
+  escalation_policy?: {
+    live_triggers: string[];
+    callback_when_unavailable: boolean;
+    callback_triggers: string[];
+    require_summary_before_handoff: boolean;
+  };
+  kb_policy?: {
+    allowed_document_types: string[];
+    allowed_intents: string[];
+    must_be_approved: boolean;
+    match_same_program_only: boolean;
+  };
+  tool_policy?: {
+    enabled_tools: string[];
+  };
+  response_style?: {
+    tone: string;
+    length: string;
+    language_policy: string;
+    ask_one_question_at_a_time: boolean;
+    confirm_critical_details: boolean;
+  };
+  queue_policy?: {
+    live_handoff_enabled: boolean;
+    callback_enabled: boolean;
+    supported_channels: string[];
+  };
+  [key: string]: unknown;
+};
+
 export type Organization = {
   id: string;
   name: string;
@@ -27,6 +78,11 @@ export type Program = {
   languages: string[];
   verification_policy: ProgramVerificationPolicy;
   handoff_policy: ProgramHandoffPolicy;
+  policy_version?: number;
+  policy_status?: string;
+  policy_json?: ProgramPolicy;
+  policy_updated_at?: string | null;
+  policy_updated_by?: string | null;
   disclosure_template_en: string;
   disclosure_template_hi: string;
 };

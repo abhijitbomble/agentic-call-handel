@@ -33,6 +33,7 @@ from app.schemas import (
     KnowledgeDocumentRead,
     LoginRequest,
     OrganizationRead,
+    ProgramPolicyUpdateRequest,
     ProgramRead,
     QAReviewRead,
     QueueRead,
@@ -53,8 +54,9 @@ from app.schemas import (
     UpdateTicketRequest,
 )
 from app.orchestrator import agent_pool
+from app.migrations import ensure_program_policy_schema
 from app.seed import seed_database
-from app.services import SessionEngine, build_analytics_snapshot, emit_events, store_audit_log
+from app.services import SessionEngine, build_analytics_snapshot, emit_events, store_audit_log, update_program_policy
 from app.twilio_media import run_twilio_media_bridge
 from app.twilio_browser import browser_identity, create_voice_access_token
 from app import twilio_handler as twiml
@@ -63,6 +65,7 @@ from app import twilio_handler as twiml
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    ensure_program_policy_schema()
     with SessionLocal() as session:
         seed_database(session)
     yield
@@ -182,6 +185,24 @@ def list_programs(
     if ctx.membership.client_program_id:
         stmt = stmt.where(ClientProgram.id == ctx.membership.client_program_id)
     return db.scalars(stmt).all()
+
+
+@app.patch("/programs/{program_id}", response_model=ProgramRead)
+def update_program(
+    program_id: str,
+    payload: ProgramPolicyUpdateRequest,
+    ctx: AuthContext = Depends(require_roles("org_owner", "program_admin", "supervisor")),
+    db: Session = Depends(get_db),
+):
+    program = db.get(ClientProgram, program_id)
+    if program is None or program.organization_id != ctx.membership.organization_id:
+        raise HTTPException(status_code=404, detail="Program not found")
+    if ctx.membership.client_program_id and program.id != ctx.membership.client_program_id:
+        raise HTTPException(status_code=403, detail="Cannot update a different program")
+    update_program_policy(program, payload.policy_json, updated_by=ctx.user.id, status=payload.policy_status)
+    db.commit()
+    db.refresh(program)
+    return program
 
 
 @app.get("/queues", response_model=list[QueueRead])
