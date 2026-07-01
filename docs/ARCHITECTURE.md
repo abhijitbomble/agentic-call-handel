@@ -950,3 +950,178 @@ The critical block is done only when all of the following are true:
 - protected dashboard pages no longer silently use demo fallback
 - live-call frontend components are lint-clean
 - one real Twilio call is proven end to end with saved evidence
+
+## Agent Builder SaaS Productization Plan
+
+This is the concrete product shape we should build on top of the current runtime.
+
+### Product Goal
+
+When a new tenant joins the platform, they should not start from a blank dashboard. They should go through a guided setup that asks:
+
+- what kind of agent they need
+- what the agent is allowed to answer
+- which knowledge files it can use
+- which tools it can call
+- when it should escalate to a human
+- which queues and staff own the work
+
+The outcome should be a published, working program that can handle live calls through `SessionEngine`.
+
+### Proposed Onboarding Flow
+
+#### Step 1. Choose the agent type
+
+The user picks one starting model:
+
+- General support
+- Claims support
+- Billing support
+- Collections support
+- Custom
+
+Each choice should create a prefilled policy pack, not just a label.
+
+#### Step 2. Define the business use case
+
+Ask the user to choose the business outcome:
+
+- answer FAQs
+- check case or order status
+- verify caller identity
+- create callback
+- create ticket
+- escalate to human
+
+This step should control the first draft of:
+
+- intent policy
+- verification policy
+- fallback policy
+- escalation policy
+
+#### Step 3. Upload knowledge
+
+The user should be able to:
+
+- upload PDF, DOCX, TXT, MD, CSV, or JSON files
+- add a manual article if they want to paste content
+- tag the KB by program and topic
+
+The uploaded file should be:
+
+- parsed into text
+- split into chunks
+- attached to the selected client program
+- filtered by document type and intent in live calls
+
+#### Step 4. Define call behavior
+
+The user should configure:
+
+- supported channels
+- required verification intents
+- low-confidence threshold
+- live handoff triggers
+- callback fallback triggers
+- allowed tools
+- response tone
+- language behavior
+
+This should still save into the existing program policy structure so `SessionEngine` can enforce it.
+
+#### Step 5. Assign queues and staff
+
+The user should then map:
+
+- client program
+- queue
+- human agent availability
+- escalation number or agent workspace ownership
+
+This is where the SaaS becomes operational instead of only conversational.
+
+#### Step 6. Preview and publish
+
+Before activation, the user should see:
+
+- policy diff
+- KB coverage
+- escalation rules
+- runtime warnings
+- sample live-call behavior
+
+Publishing should create a new policy version and immediately activate the next live-call behavior.
+
+### What Already Exists
+
+The repo already has several of the required building blocks:
+
+- tenant model with `Organization -> Client Program -> Queue`
+- `SessionEngine` as the central decision layer
+- Twilio and Deepgram live-call transport
+- KB document and chunk storage
+- agent builder policy editing
+- runtime policy preview and validation
+- live call and QA dashboards
+
+### What Still Needs To Be Built
+
+#### 1. Real onboarding wizard
+
+We need a dedicated “create new agent” experience that walks a user through the full setup instead of only editing an existing program.
+
+#### 2. Policy pack generation
+
+We need the template selection to generate a complete business policy, not just a few fields.
+
+#### 3. Better KB ingestion metadata
+
+We need uploaded files to be stored with richer metadata like:
+
+- source file name
+- program
+- document type
+- language
+- topic tags
+- ingestion status
+
+#### 4. Queue and staff assignment UX
+
+We need a real ownership screen for:
+
+- which queues the program owns
+- which agents can receive live handoffs
+- which users can manage callbacks
+
+#### 5. Stronger publish contract
+
+We need a publish action that clearly says:
+
+- what changed
+- what is live now
+- what will affect new calls
+- whether the new config is safe to activate
+
+### Recommended Build Order
+
+1. Build the new agent setup wizard.
+2. Tie the wizard to the existing program policy model.
+3. Expand KB ingestion to support file upload as the primary path.
+4. Add queue and agent assignment screens.
+5. Add a live preview and publish confirmation flow.
+6. Then improve retrieval quality and runtime explainability.
+
+### Success Definition
+
+We should consider the SaaS productized when a new user can:
+
+- create a client program
+- choose an agent template
+- upload KB files
+- assign a queue
+- publish the policy
+- place a real live call
+- see the agent answer from the uploaded KB and escalate when required
+
+That is the point where the product stops feeling like separate admin screens and starts feeling like a real agent-builder platform.

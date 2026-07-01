@@ -35,6 +35,12 @@ type ValidationFinding = {
   detail: string;
 };
 
+type OnboardingMilestone = {
+  title: string;
+  detail: string;
+  complete: boolean;
+};
+
 type ChangeSummaryItem = {
   label: string;
   value: string;
@@ -605,6 +611,55 @@ function summarizePolicyChanges(currentPolicy: ProgramPolicy, draftPolicy: Progr
   ];
 }
 
+function buildOnboardingMilestones(templateId: TemplateId, draft: BuilderDraft, previewFindings: ValidationFinding[]): OnboardingMilestone[] {
+  const channelList = splitList(draft.supportedChannels);
+  const kbDocs = splitList(draft.allowedDocumentTypes);
+  const kbIntents = splitList(draft.allowedIntents);
+  const liveTriggers = splitList(draft.liveTriggers);
+  const callbackTriggers = splitList(draft.callbackTriggers);
+  const warningCount = previewFindings.filter((finding) => finding.kind === "warning").length;
+
+  return [
+    {
+      title: "Pick an agent type",
+      detail: templateId === "custom" ? "Choose a preset such as support, claims, billing, or collections." : `Using the ${templateId.replaceAll("_", " ")} preset as the starting policy pack.`,
+      complete: templateId !== "custom",
+    },
+    {
+      title: "Define call behavior",
+      detail:
+        draft.mode.length > 0 && channelList.length > 0
+          ? `Mode: ${draft.mode}. Channels: ${channelList.join(", ")}.`
+          : "Set operating mode and supported channels so the runtime knows how calls should flow.",
+      complete: draft.mode.length > 0 && channelList.length > 0,
+    },
+    {
+      title: "Attach knowledge",
+      detail:
+        kbDocs.length > 0 && kbIntents.length > 0
+          ? `KB scope: ${kbDocs.join(", ")} documents for ${kbIntents.join(", ")} intents.`
+          : "Upload KB files or add articles, then decide which document types and intents the agent may use.",
+      complete: kbDocs.length > 0 && kbIntents.length > 0,
+    },
+    {
+      title: "Set escalation rules",
+      detail:
+        liveTriggers.length > 0 || callbackTriggers.length > 0
+          ? `Live: ${liveTriggers.join(", ") || "none"}. Callback: ${callbackTriggers.join(", ") || "none"}.`
+          : "Choose live handoff triggers and callback fallback behavior for unavailable-agent cases.",
+      complete: liveTriggers.length > 0 && callbackTriggers.length > 0,
+    },
+    {
+      title: "Publish safely",
+      detail:
+        warningCount === 0
+          ? "Preview is clean and ready to publish into the live policy engine."
+          : `${warningCount} warning${warningCount === 1 ? "" : "s"} still need attention before launch.`,
+      complete: warningCount === 0,
+    },
+  ];
+}
+
 export function AgentBuilderForm({ orgName, programs }: Props) {
   const [items, setItems] = useState(programs);
   const [selectedProgramId, setSelectedProgramId] = useState(programs[0]?.id ?? "");
@@ -623,12 +678,21 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
   const canGoBack = selectedStepIndex > 0;
   const canGoNext = selectedStepIndex >= 0 && selectedStepIndex < STEP_DEFS.length - 1;
   const previewPolicy = selectedProgram ? policyFromDraft(selectedProgram, draft) : basePolicy();
-  const previewFindings = selectedProgram ? buildValidationFindings(policyFromDraft(selectedProgram, draft)) : [];
+  const previewFindings = useMemo(
+    () => (selectedProgram ? buildValidationFindings(policyFromDraft(selectedProgram, draft)) : []),
+    [draft, selectedProgram],
+  );
   const runtimeFindings = useMemo(() => findingsFromRuntime(runtime), [runtime]);
+  const onboardingMilestones = useMemo(
+    () => buildOnboardingMilestones(templateId, draft, previewFindings),
+    [draft, previewFindings, templateId],
+  );
   const changeSummary = useMemo(
     () => (selectedProgram ? summarizePolicyChanges(normalizePolicy(selectedProgram), previewPolicy) : []),
     [selectedProgram, previewPolicy],
   );
+  const onboardingCompleteCount = onboardingMilestones.filter((item) => item.complete).length;
+  const nextMilestone = onboardingMilestones.find((item) => !item.complete);
 
   useEffect(() => {
     if (!selectedProgram) return;
@@ -748,6 +812,57 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
         <p style={{ margin: 0, color: "var(--muted)", fontSize: "0.88rem", lineHeight: 1.5, maxWidth: 900 }}>
           Configure how the AI handles calls for {orgName}. Program owners can decide what the agent can answer, which KB documents it can use, when to verify callers, and when to hand off to a human.
         </p>
+      </div>
+
+      <div className="panel" style={{ marginBottom: 14 }}>
+        <div className="panel-header">
+          <div style={{ display: "grid", gap: 2 }}>
+            <span className="panel-title">New tenant setup</span>
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>Use this path when a client is onboarding for the first time.</span>
+          </div>
+          <div className="row-meta" style={{ gap: 10 }}>
+            <span>{onboardingCompleteCount}/{onboardingMilestones.length} steps ready</span>
+            <span>{nextMilestone ? `Next: ${nextMilestone.title}` : "Ready to publish"}</span>
+          </div>
+        </div>
+        <div style={{ padding: 16, display: "grid", gap: 12 }}>
+          <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+            {onboardingMilestones.map((item) => (
+              <div
+                key={item.title}
+                style={{
+                  padding: 14,
+                  borderRadius: 14,
+                  border: "1px solid rgba(28,42,43,0.12)",
+                  background: item.complete ? "rgba(15,123,119,0.08)" : "white",
+                  minHeight: 124,
+                  display: "grid",
+                  gap: 8,
+                }}
+              >
+                <div className="row-title-line" style={{ alignItems: "center" }}>
+                  <strong style={{ fontSize: 13 }}>{item.title}</strong>
+                  <span className={`badge badge-${item.complete ? "high" : "default"}`}>{item.complete ? "Ready" : "Need setup"}</span>
+                </div>
+                <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{item.detail}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+            <div style={{ padding: 14, borderRadius: 14, background: "rgba(28,42,43,0.04)" }}>
+              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 6 }}>What the tenant provides</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+                Use case, policy pack, KB files, queue ownership, and human routing rules.
+              </div>
+            </div>
+            <div style={{ padding: 14, borderRadius: 14, background: "rgba(28,42,43,0.04)" }}>
+              <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 6 }}>What the platform does</div>
+              <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+                Converts those choices into a live `SessionEngine` policy for phone and browser calls.
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="panel" style={{ marginBottom: 14 }}>
