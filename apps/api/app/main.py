@@ -778,14 +778,14 @@ def create_knowledge_doc(
 
 @app.post("/knowledge-docs/upload", response_model=KnowledgeDocumentRead)
 async def upload_knowledge_doc(
-    organization_id: Annotated[str, Form(...)],
-    client_program_id: Annotated[str, Form(...)],
-    title: Annotated[str, Form("")] = "",
-    source_type: Annotated[str, Form("faq")] = "faq",
-    language: Annotated[str, Form("English")] = "English",
-    tags: Annotated[str, Form("")] = "",
-    keywords: Annotated[str, Form("")] = "",
-    content: Annotated[str, Form("")] = "",
+    organization_id: Annotated[str, Form()],
+    client_program_id: Annotated[str, Form()],
+    title: Annotated[str, Form()] = "",
+    source_type: Annotated[str, Form()] = "faq",
+    language: Annotated[str, Form()] = "English",
+    tags: Annotated[str, Form()] = "",
+    keywords: Annotated[str, Form()] = "",
+    content: Annotated[str, Form()] = "",
     file: UploadFile | None = File(default=None),
     ctx: AuthContext = Depends(require_roles("org_owner", "program_admin", "supervisor")),
     db: Session = Depends(get_db),
