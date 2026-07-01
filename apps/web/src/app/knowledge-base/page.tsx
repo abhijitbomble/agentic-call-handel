@@ -21,7 +21,7 @@ export default async function KnowledgeBasePage() {
       <div className="section-header-row">
         <SectionHeader
           title="Knowledge Base"
-          description="Articles the AI uses to answer customer questions accurately and within policy. Add articles to expand what the AI can respond to."
+          description="Articles the AI uses to answer customer questions accurately and within policy. Upload a file or add an article to expand what the AI can respond to."
           meta={`${knowledge.length} active articles`}
         />
         {primaryOrg && primaryProgram && (

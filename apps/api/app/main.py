@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+import io
 import asyncio
+import json
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
+import re
+import zipfile
 from typing import Annotated
+import xml.etree.ElementTree as ET
 
-from fastapi import Depends, FastAPI, Form, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response as XMLResponse
 from sqlalchemy import select
@@ -61,6 +67,11 @@ from app.services import SessionEngine, build_analytics_snapshot, emit_events, p
 from app.twilio_media import run_twilio_media_bridge
 from app.twilio_browser import browser_identity, create_voice_access_token
 from app import twilio_handler as twiml
+
+try:
+    from pypdf import PdfReader
+except Exception:  # pragma: no cover - optional dependency safety
+    PdfReader = None
 
 
 @asynccontextmanager
@@ -120,6 +131,75 @@ def twilio_browser_missing_fields() -> list[str]:
     if not settings.deepgram_api_key:
         missing.append("VOICEOPS_DEEPGRAM_API_KEY")
     return missing
+
+
+def csv_to_list(value: str | None) -> list[str]:
+    if not value:
+        return []
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def split_knowledge_text(text: str, max_chars: int = 1200) -> list[str]:
+    normalized = re.sub(r"\r\n?", "\n", text).strip()
+    if not normalized:
+        return []
+
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n+", normalized) if part.strip()]
+    if not paragraphs:
+        paragraphs = [normalized]
+
+    chunks: list[str] = []
+    current = ""
+    for paragraph in paragraphs:
+        if len(paragraph) > max_chars:
+            if current:
+                chunks.append(current.strip())
+                current = ""
+            sentences = re.split(r"(?<=[.!?])\s+", paragraph)
+            segment = ""
+            for sentence in sentences:
+                if not sentence:
+                    continue
+                if len(segment) + len(sentence) + 1 <= max_chars:
+                    segment = f"{segment} {sentence}".strip()
+                else:
+                    if segment:
+                        chunks.append(segment.strip())
+                    segment = sentence
+            if segment:
+                chunks.append(segment.strip())
+            continue
+
+        candidate = paragraph if not current else f"{current}\n\n{paragraph}"
+        if len(candidate) <= max_chars:
+            current = candidate
+        else:
+            if current:
+                chunks.append(current.strip())
+            current = paragraph
+
+    if current:
+        chunks.append(current.strip())
+    return [chunk for chunk in chunks if chunk]
+
+
+def extract_text_from_upload(filename: str, data: bytes) -> str:
+    suffix = Path(filename).suffix.lower()
+    if suffix in {".txt", ".md", ".csv", ".json", ".log"}:
+        return data.decode("utf-8", errors="ignore")
+    if suffix == ".pdf":
+        if PdfReader is None:
+            raise HTTPException(status_code=400, detail="PDF uploads are not available on this server yet.")
+        reader = PdfReader(io.BytesIO(data))
+        return "\n\n".join((page.extract_text() or "").strip() for page in reader.pages).strip()
+    if suffix == ".docx":
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            xml_bytes = archive.read("word/document.xml")
+        root = ET.fromstring(xml_bytes)
+        namespace = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+        lines = ["".join(node.itertext()).strip() for node in root.findall(".//w:p", namespace)]
+        return "\n\n".join(line for line in lines if line).strip()
+    raise HTTPException(status_code=400, detail=f"Unsupported file type '{suffix or 'unknown'}'. Please upload PDF, DOCX, TXT, MD, CSV, or JSON.")
 
 
 def scope_for_membership(ctx: AuthContext, model) -> list:
@@ -667,13 +747,16 @@ def create_knowledge_doc(
     )
     db.add(doc)
     db.flush()
-    if payload.content:
+    chunks = split_knowledge_text(payload.content)
+    if not chunks and payload.content.strip():
+        chunks = [payload.content.strip()]
+    for chunk_text in chunks:
         chunk = KnowledgeChunk(
             document_id=doc.id,
             organization_id=doc.organization_id,
             client_program_id=doc.client_program_id,
             language=payload.languages[0] if payload.languages else "English",
-            content=payload.content,
+            content=chunk_text,
             keywords=payload.keywords,
         )
         db.add(chunk)
@@ -687,6 +770,80 @@ def create_knowledge_doc(
         organization_id=doc.organization_id,
         client_program_id=doc.client_program_id,
         details={"title": doc.title},
+    )
+    db.commit()
+    db.refresh(doc)
+    return KnowledgeDocumentRead.model_validate(doc)
+
+
+@app.post("/knowledge-docs/upload", response_model=KnowledgeDocumentRead)
+async def upload_knowledge_doc(
+    organization_id: Annotated[str, Form(...)],
+    client_program_id: Annotated[str, Form(...)],
+    title: Annotated[str, Form("")] = "",
+    source_type: Annotated[str, Form("faq")] = "faq",
+    language: Annotated[str, Form("English")] = "English",
+    tags: Annotated[str, Form("")] = "",
+    keywords: Annotated[str, Form("")] = "",
+    content: Annotated[str, Form("")] = "",
+    file: UploadFile | None = File(default=None),
+    ctx: AuthContext = Depends(require_roles("org_owner", "program_admin", "supervisor")),
+    db: Session = Depends(get_db),
+):
+    if organization_id != ctx.membership.organization_id:
+        raise HTTPException(status_code=403, detail="Cannot create a document for another organization")
+    raw_text = content.strip()
+    filename = ""
+    if file is not None:
+        file_bytes = await file.read()
+        filename = file.filename or "knowledge-upload"
+        file_text = extract_text_from_upload(filename, file_bytes)
+        raw_text = file_text.strip() or raw_text
+    if not raw_text:
+        raise HTTPException(status_code=400, detail="Upload a file or provide content for the knowledge article.")
+
+    doc_title = title.strip() or Path(filename).stem.replace("_", " ").replace("-", " ").strip() or "Uploaded knowledge article"
+    doc = KnowledgeDocument(
+        organization_id=organization_id,
+        client_program_id=client_program_id,
+        title=doc_title,
+        source_type=source_type or "faq",
+        status="active",
+        languages=[language or "English"],
+        tags=csv_to_list(tags),
+    )
+    db.add(doc)
+    db.flush()
+
+    chunk_texts = split_knowledge_text(raw_text)
+    if not chunk_texts:
+        chunk_texts = [raw_text]
+    keyword_list = csv_to_list(keywords)
+    if filename:
+        keyword_list = list(dict.fromkeys(keyword_list + csv_to_list(doc_title)))
+
+    for chunk_text in chunk_texts:
+        db.add(
+            KnowledgeChunk(
+                document_id=doc.id,
+                organization_id=doc.organization_id,
+                client_program_id=doc.client_program_id,
+                language=language or "English",
+                content=chunk_text,
+                keywords=keyword_list,
+            )
+        )
+
+    store_audit_log(
+        db,
+        actor_type="staff",
+        actor_id=ctx.user.id,
+        action="knowledge_doc_uploaded",
+        entity_type="knowledge_document",
+        entity_id=doc.id,
+        organization_id=doc.organization_id,
+        client_program_id=doc.client_program_id,
+        details={"title": doc.title, "filename": filename or None},
     )
     db.commit()
     db.refresh(doc)

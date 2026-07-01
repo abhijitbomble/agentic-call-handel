@@ -593,6 +593,49 @@ def build_verification_prompt(program: ClientProgram) -> str:
     return f"For security, please confirm {joined}."
 
 
+_KB_STOPWORDS = {
+    "the",
+    "and",
+    "for",
+    "with",
+    "that",
+    "this",
+    "from",
+    "have",
+    "your",
+    "what",
+    "when",
+    "where",
+    "how",
+    "why",
+    "can",
+    "could",
+    "would",
+    "should",
+    "please",
+    "need",
+    "about",
+    "into",
+    "been",
+    "able",
+    "will",
+    "not",
+    "you",
+    "are",
+    "our",
+    "they",
+    "them",
+}
+
+
+def kb_tokens(text: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-z0-9]+", text.lower())
+        if len(token) > 2 and token not in _KB_STOPWORDS
+    }
+
+
 class SqlKnowledgeAdapter:
     def search(
         self,
@@ -603,6 +646,7 @@ class SqlKnowledgeAdapter:
         allowed_document_types: list[str] | None = None,
     ) -> dict[str, Any] | None:
         lowered = message.lower()
+        question_tokens = kb_tokens(message)
         docs_stmt = select(KnowledgeDocument.id).where(
             KnowledgeDocument.client_program_id == program_id,
             KnowledgeDocument.status == "active",
@@ -620,7 +664,10 @@ class SqlKnowledgeAdapter:
         ).all()
         scored: list[tuple[int, KnowledgeChunk]] = []
         for chunk in chunks:
-            score = sum(1 for keyword in chunk.keywords if keyword.lower() in lowered)
+            keyword_hits = sum(1 for keyword in chunk.keywords if keyword.lower() in lowered or keyword.lower() in question_tokens)
+            content_tokens = kb_tokens(chunk.content)
+            content_hits = len(question_tokens & content_tokens)
+            score = keyword_hits * 3 + content_hits
             if chunk.language == language:
                 score += 1
             if score:
