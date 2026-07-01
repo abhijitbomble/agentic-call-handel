@@ -9,6 +9,7 @@ type Props = {
 };
 
 type BuilderDraft = {
+  template: string;
   mode: string;
   requiredFor: string;
   allowedIdentifiers: string;
@@ -34,7 +35,22 @@ type ValidationFinding = {
   detail: string;
 };
 
+type ChangeSummaryItem = {
+  label: string;
+  value: string;
+};
+
+type BuilderStep = "template" | "basics" | "caller" | "kb" | "escalation" | "tools" | "review";
+type TemplateId = "general_inbound" | "support" | "claims" | "billing" | "collections" | "custom";
+
+type TemplatePreset = {
+  label: string;
+  description: string;
+  draft: Partial<BuilderDraft>;
+};
+
 const DEFAULT_DRAFT: BuilderDraft = {
+  template: "custom",
   mode: "ai_first_then_human",
   requiredFor: "case_status",
   allowedIdentifiers: "customer_code, last4_phone",
@@ -52,6 +68,146 @@ const DEFAULT_DRAFT: BuilderDraft = {
   askOneQuestionAtATime: true,
   confirmCriticalDetails: true,
   summaryBeforeHandoff: true,
+};
+
+const STEP_DEFS: { id: BuilderStep; label: string; description: string }[] = [
+  { id: "template", label: "Template", description: "Start with a preset" },
+  { id: "basics", label: "Basics", description: "Choose the core behavior" },
+  { id: "caller", label: "Caller", description: "Set verification rules" },
+  { id: "kb", label: "KB", description: "Control what it can read" },
+  { id: "escalation", label: "Escalation", description: "Define human handoff" },
+  { id: "tools", label: "Tools", description: "Pick allowed actions" },
+  { id: "review", label: "Review", description: "Check before publish" },
+];
+
+const TEMPLATE_PRESETS: Record<TemplateId, TemplatePreset> = {
+  general_inbound: {
+    label: "General inbound",
+    description: "Balanced starting point for most support desks.",
+    draft: {
+      template: "general_inbound",
+      mode: "ai_first_then_human",
+      requiredFor: "case_status, policy_query",
+      allowedIdentifiers: "customer_code, last4_phone",
+      liveTriggers: "human_request, angry, verification_failures, low_confidence",
+      callbackTriggers: "no_agent_available, outside_business_hours, callback_request, low_confidence",
+      callbackOnUnavailable: true,
+      lowConfidenceThreshold: 0.4,
+      allowedDocumentTypes: "faq, policy, procedure",
+      allowedIntents: "faq_answer, case_status, policy_query, payment_issue",
+      enabledTools: "lookup_case, create_ticket, create_callback, request_handoff, verify_customer",
+      supportedChannels: "phone, browser",
+      tone: "calm",
+      length: "short",
+      languagePolicy: "match_caller",
+      askOneQuestionAtATime: true,
+      confirmCriticalDetails: true,
+      summaryBeforeHandoff: true,
+    },
+  },
+  support: {
+    label: "Support",
+    description: "Good for helpdesk and product support teams.",
+    draft: {
+      template: "support",
+      mode: "ai_first_then_human",
+      requiredFor: "case_status, policy_query",
+      allowedIdentifiers: "customer_code, last4_phone",
+      liveTriggers: "human_request, angry, low_confidence",
+      callbackTriggers: "no_agent_available, callback_request, low_confidence",
+      callbackOnUnavailable: true,
+      lowConfidenceThreshold: 0.45,
+      allowedDocumentTypes: "faq, procedure",
+      allowedIntents: "faq_answer, case_status, policy_query",
+      enabledTools: "lookup_case, create_ticket, create_callback, request_handoff, verify_customer",
+      supportedChannels: "phone, browser",
+      tone: "warm",
+      length: "short",
+      languagePolicy: "match_caller",
+      askOneQuestionAtATime: true,
+      confirmCriticalDetails: true,
+      summaryBeforeHandoff: true,
+    },
+  },
+  claims: {
+    label: "Claims",
+    description: "Stricter verification and escalation for claims flows.",
+    draft: {
+      template: "claims",
+      mode: "ai_first_then_human",
+      requiredFor: "case_status, policy_query, payment_issue",
+      allowedIdentifiers: "customer_code, last4_phone",
+      liveTriggers: "human_request, angry, verification_failures, low_confidence, high_risk",
+      callbackTriggers: "no_agent_available, outside_business_hours, callback_request, low_confidence",
+      callbackOnUnavailable: true,
+      lowConfidenceThreshold: 0.4,
+      allowedDocumentTypes: "faq, policy, procedure",
+      allowedIntents: "faq_answer, case_status, policy_query, payment_issue",
+      enabledTools: "lookup_case, create_ticket, create_callback, request_handoff, verify_customer",
+      supportedChannels: "phone, browser",
+      tone: "calm",
+      length: "medium",
+      languagePolicy: "match_caller",
+      askOneQuestionAtATime: true,
+      confirmCriticalDetails: true,
+      summaryBeforeHandoff: true,
+    },
+  },
+  billing: {
+    label: "Billing",
+    description: "Use for payment, due date, and billing help.",
+    draft: {
+      template: "billing",
+      mode: "ai_first_then_human",
+      requiredFor: "case_status, payment_issue",
+      allowedIdentifiers: "customer_code, last4_phone",
+      liveTriggers: "human_request, angry, low_confidence",
+      callbackTriggers: "no_agent_available, outside_business_hours, callback_request, low_confidence",
+      callbackOnUnavailable: true,
+      lowConfidenceThreshold: 0.45,
+      allowedDocumentTypes: "faq, policy, procedure",
+      allowedIntents: "faq_answer, case_status, payment_issue",
+      enabledTools: "lookup_case, create_ticket, create_callback, request_handoff, verify_customer",
+      supportedChannels: "phone, browser",
+      tone: "formal",
+      length: "short",
+      languagePolicy: "match_caller",
+      askOneQuestionAtATime: true,
+      confirmCriticalDetails: true,
+      summaryBeforeHandoff: true,
+    },
+  },
+  collections: {
+    label: "Collections",
+    description: "Prefer callback fallback and careful language.",
+    draft: {
+      template: "collections",
+      mode: "ai_first_then_human",
+      requiredFor: "payment_issue",
+      allowedIdentifiers: "customer_code, last4_phone",
+      liveTriggers: "human_request, angry, low_confidence",
+      callbackTriggers: "no_agent_available, outside_business_hours, callback_request, low_confidence",
+      callbackOnUnavailable: true,
+      lowConfidenceThreshold: 0.5,
+      allowedDocumentTypes: "faq, policy",
+      allowedIntents: "faq_answer, payment_issue, case_status",
+      enabledTools: "lookup_case, create_callback, request_handoff, verify_customer",
+      supportedChannels: "phone, browser",
+      tone: "formal",
+      length: "short",
+      languagePolicy: "english_first",
+      askOneQuestionAtATime: true,
+      confirmCriticalDetails: true,
+      summaryBeforeHandoff: true,
+    },
+  },
+  custom: {
+    label: "Custom",
+    description: "Start from the current program settings.",
+    draft: {
+      template: "custom",
+    },
+  },
 };
 
 function splitList(value: string): string[] {
@@ -150,6 +306,7 @@ function normalizePolicy(program: Program): ProgramPolicy {
 function draftFromProgram(program: Program): BuilderDraft {
   const policy = normalizePolicy(program);
   return {
+    template: "custom",
     mode: String(policy.mode ?? DEFAULT_DRAFT.mode),
     requiredFor: joinList(policy.verification_policy?.required_for),
     allowedIdentifiers: joinList(policy.verification_policy?.allowed_identifiers),
@@ -167,6 +324,14 @@ function draftFromProgram(program: Program): BuilderDraft {
     askOneQuestionAtATime: Boolean(policy.response_style?.ask_one_question_at_a_time ?? true),
     confirmCriticalDetails: Boolean(policy.response_style?.confirm_critical_details ?? true),
     summaryBeforeHandoff: Boolean(policy.escalation_policy?.require_summary_before_handoff ?? true),
+  };
+}
+
+function applyTemplateToDraft(draft: BuilderDraft, templateId: TemplateId): BuilderDraft {
+  return {
+    ...draft,
+    ...TEMPLATE_PRESETS[templateId].draft,
+    template: templateId,
   };
 }
 
@@ -374,20 +539,96 @@ function findingsFromRuntime(runtime: ProgramPolicyRuntime | null): ValidationFi
   return findings;
 }
 
+function summarizePolicyChanges(currentPolicy: ProgramPolicy, draftPolicy: ProgramPolicy): ChangeSummaryItem[] {
+  const changes: ChangeSummaryItem[] = [];
+
+  const addChange = (label: string, currentValue: string, nextValue: string) => {
+    if (currentValue === nextValue) return;
+    changes.push({ label, value: `${currentValue || "none"} -> ${nextValue || "none"}` });
+  };
+
+  addChange("Mode", String(currentPolicy.mode ?? "unknown"), String(draftPolicy.mode ?? "unknown"));
+  addChange("Channels", joinList(currentPolicy.queue_policy?.supported_channels), joinList(draftPolicy.queue_policy?.supported_channels));
+  addChange("Verification", joinList(currentPolicy.verification_policy?.required_for), joinList(draftPolicy.verification_policy?.required_for));
+
+  const currentKbScope = `${joinList(currentPolicy.kb_policy?.allowed_document_types)}|${joinList(currentPolicy.kb_policy?.allowed_intents)}`;
+  const draftKbScope = `${joinList(draftPolicy.kb_policy?.allowed_document_types)}|${joinList(draftPolicy.kb_policy?.allowed_intents)}`;
+  if (currentKbScope !== draftKbScope) {
+    changes.push({
+      label: "KB scope",
+      value: `${joinList(currentPolicy.kb_policy?.allowed_document_types) || "none"} / ${joinList(currentPolicy.kb_policy?.allowed_intents) || "none"} -> ${joinList(draftPolicy.kb_policy?.allowed_document_types) || "none"} / ${joinList(draftPolicy.kb_policy?.allowed_intents) || "none"}`,
+    });
+  }
+
+  addChange("Escalation", joinList(currentPolicy.escalation_policy?.live_triggers), joinList(draftPolicy.escalation_policy?.live_triggers));
+  addChange("Tools", joinList(currentPolicy.tool_policy?.enabled_tools), joinList(draftPolicy.tool_policy?.enabled_tools));
+
+  return changes;
+  return [
+    {
+      label: "Mode",
+      value: currentPolicy.mode === draftPolicy.mode ? String(draftPolicy.mode) : `${currentPolicy.mode ?? "unknown"} → ${draftPolicy.mode ?? "unknown"}`,
+    },
+    {
+      label: "Channels",
+      value: joinList(currentPolicy.queue_policy?.supported_channels) === joinList(draftPolicy.queue_policy?.supported_channels)
+        ? joinList(draftPolicy.queue_policy?.supported_channels)
+        : `${joinList(currentPolicy.queue_policy?.supported_channels) || "none"} → ${joinList(draftPolicy.queue_policy?.supported_channels) || "none"}`,
+    },
+    {
+      label: "Verification",
+      value: joinList(currentPolicy.verification_policy?.required_for) === joinList(draftPolicy.verification_policy?.required_for)
+        ? (joinList(draftPolicy.verification_policy?.required_for) || "none")
+        : `${joinList(currentPolicy.verification_policy?.required_for) || "none"} → ${joinList(draftPolicy.verification_policy?.required_for) || "none"}`,
+    },
+    {
+      label: "KB scope",
+      value:
+        joinList(currentPolicy.kb_policy?.allowed_document_types) === joinList(draftPolicy.kb_policy?.allowed_document_types)
+          ? `${joinList(draftPolicy.kb_policy?.allowed_document_types) || "none"} / ${joinList(draftPolicy.kb_policy?.allowed_intents) || "none"}`
+          : `${joinList(currentPolicy.kb_policy?.allowed_document_types) || "none"} → ${joinList(draftPolicy.kb_policy?.allowed_document_types) || "none"}`,
+    },
+    {
+      label: "Escalation",
+      value:
+        joinList(currentPolicy.escalation_policy?.live_triggers) === joinList(draftPolicy.escalation_policy?.live_triggers)
+          ? joinList(draftPolicy.escalation_policy?.live_triggers) || "none"
+          : `${joinList(currentPolicy.escalation_policy?.live_triggers) || "none"} → ${joinList(draftPolicy.escalation_policy?.live_triggers) || "none"}`,
+    },
+    {
+      label: "Tools",
+      value:
+        joinList(currentPolicy.tool_policy?.enabled_tools) === joinList(draftPolicy.tool_policy?.enabled_tools)
+          ? joinList(draftPolicy.tool_policy?.enabled_tools) || "none"
+          : `${joinList(currentPolicy.tool_policy?.enabled_tools) || "none"} → ${joinList(draftPolicy.tool_policy?.enabled_tools) || "none"}`,
+    },
+  ];
+}
+
 export function AgentBuilderForm({ orgName, programs }: Props) {
   const [items, setItems] = useState(programs);
   const [selectedProgramId, setSelectedProgramId] = useState(programs[0]?.id ?? "");
+  const [selectedStep, setSelectedStep] = useState<BuilderStep>("template");
   const [drafts, setDrafts] = useState<Record<string, BuilderDraft>>({});
   const [status, setStatus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showPublishConfirm, setShowPublishConfirm] = useState(false);
   const [runtime, setRuntime] = useState<ProgramPolicyRuntime | null>(null);
   const [runtimeStatus, setRuntimeStatus] = useState<string | null>(null);
 
   const selectedProgram = useMemo(() => items.find((program) => program.id === selectedProgramId) ?? items[0], [items, selectedProgramId]);
   const draft = selectedProgram ? (drafts[selectedProgram.id] ?? draftFromProgram(selectedProgram)) : DEFAULT_DRAFT;
+  const templateId = (draft.template as TemplateId) ?? "custom";
+  const selectedStepIndex = useMemo(() => STEP_DEFS.findIndex((step) => step.id === selectedStep), [selectedStep]);
+  const canGoBack = selectedStepIndex > 0;
+  const canGoNext = selectedStepIndex >= 0 && selectedStepIndex < STEP_DEFS.length - 1;
   const previewPolicy = selectedProgram ? policyFromDraft(selectedProgram, draft) : basePolicy();
   const previewFindings = selectedProgram ? buildValidationFindings(policyFromDraft(selectedProgram, draft)) : [];
   const runtimeFindings = useMemo(() => findingsFromRuntime(runtime), [runtime]);
+  const changeSummary = useMemo(
+    () => (selectedProgram ? summarizePolicyChanges(normalizePolicy(selectedProgram), previewPolicy) : []),
+    [selectedProgram, previewPolicy],
+  );
 
   useEffect(() => {
     if (!selectedProgram) return;
@@ -435,6 +676,29 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
         ...patch,
       },
     }));
+  }
+
+  function applyTemplate(template: TemplateId) {
+    if (!selectedProgram) return;
+    setStatus(null);
+    setDrafts((prev) => {
+      const currentDraft = prev[selectedProgram.id] ?? draftFromProgram(selectedProgram);
+      return {
+        ...prev,
+        [selectedProgram.id]: applyTemplateToDraft(currentDraft, template),
+      };
+    });
+    setSelectedStep("basics");
+  }
+
+  function goToPreviousStep() {
+    if (!canGoBack) return;
+    setSelectedStep(STEP_DEFS[selectedStepIndex - 1].id);
+  }
+
+  function goToNextStep() {
+    if (!canGoNext) return;
+    setSelectedStep(STEP_DEFS[selectedStepIndex + 1].id);
   }
 
   async function savePolicy() {
@@ -488,6 +752,34 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
 
       <div className="panel" style={{ marginBottom: 14 }}>
         <div className="panel-header">
+          <span className="panel-title">Builder flow</span>
+        </div>
+        <div style={{ padding: 16, display: "flex", flexWrap: "wrap", gap: 10 }}>
+          {STEP_DEFS.map((step) => (
+            <button
+              key={step.id}
+              type="button"
+              onClick={() => setSelectedStep(step.id)}
+              style={{
+                border: "1px solid rgba(28,42,43,0.12)",
+                background: selectedStep === step.id ? "rgba(15,123,119,0.12)" : "white",
+                color: "var(--ink)",
+                borderRadius: 999,
+                padding: "10px 14px",
+                minWidth: 128,
+                textAlign: "left",
+                cursor: "pointer",
+              }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 13 }}>{step.label}</div>
+              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{step.description}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="panel" style={{ marginBottom: 14 }}>
+        <div className="panel-header">
           <span className="panel-title">Program scope</span>
         </div>
         <div style={{ padding: 16, display: "grid", gap: 12 }}>
@@ -502,6 +794,7 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
             {pill("Version", String(current.policy_version ?? 1))}
             {pill("Status", String(current.policy_status ?? "active"))}
             {pill("Languages", current.languages.join(" / "))}
+            {pill("Template", templateId)}
           </div>
           <div className="row-meta" style={{ gap: 10 }}>
             <span>Updated by: {current.policy_updated_by ?? "system"}</span>
@@ -512,8 +805,50 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
 
       <div className="double-grid" style={{ alignItems: "start" }}>
         <div style={{ display: "grid", gap: 14 }}>
+          {selectedStep === "template" && (
+            <div className="panel">
+              <div className="panel-header">
+                <div style={{ display: "grid", gap: 2 }}>
+                  <span className="panel-title">Start with a template</span>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>Pick a safe preset first, then customize it for the program.</span>
+                </div>
+              </div>
+              <div style={{ padding: 16, display: "grid", gap: 12 }}>
+                <div className="row-meta" style={{ gap: 10 }}>
+                  <span>Choose a preset, then adjust it to fit the client.</span>
+                </div>
+                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+                  {(Object.entries(TEMPLATE_PRESETS) as [TemplateId, TemplatePreset][]).map(([id, preset]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => applyTemplate(id)}
+                      style={{
+                        textAlign: "left",
+                        padding: 14,
+                        borderRadius: 14,
+                        border: "1px solid rgba(28,42,43,0.12)",
+                        background: id === templateId ? "rgba(15,123,119,0.10)" : "white",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, marginBottom: 6 }}>{preset.label}</div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.4 }}>{preset.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {selectedStep === "basics" && (
           <div className="panel">
-            <div className="panel-header"><span className="panel-title">Agent mode</span></div>
+            <div className="panel-header">
+              <div style={{ display: "grid", gap: 2 }}>
+                <span className="panel-title">Agent mode</span>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>Choose how the agent should behave on every call.</span>
+              </div>
+            </div>
             <div style={{ padding: 16, display: "grid", gap: 12 }}>
               <label style={{ display: "grid", gap: 6 }}>
                 <span style={{ fontWeight: 600, fontSize: 12 }}>Operating mode</span>
@@ -529,9 +864,16 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
               </label>
             </div>
           </div>
+          )}
 
+          {selectedStep === "caller" && (
           <div className="panel">
-            <div className="panel-header"><span className="panel-title">Caller verification</span></div>
+            <div className="panel-header">
+              <div style={{ display: "grid", gap: 2 }}>
+                <span className="panel-title">Caller verification</span>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>Define when the caller must prove identity and how strict to be.</span>
+              </div>
+            </div>
             <div style={{ padding: 16, display: "grid", gap: 12 }}>
               <label style={{ display: "grid", gap: 6 }}>
                 <span style={{ fontWeight: 600, fontSize: 12 }}>Required for intents</span>
@@ -547,9 +889,16 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
               </label>
             </div>
           </div>
+          )}
 
+          {selectedStep === "escalation" && (
           <div className="panel">
-            <div className="panel-header"><span className="panel-title">Escalation rules</span></div>
+            <div className="panel-header">
+              <div style={{ display: "grid", gap: 2 }}>
+                <span className="panel-title">Escalation rules</span>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>Choose when the AI should move to a human or callback.</span>
+              </div>
+            </div>
             <div style={{ padding: 16, display: "grid", gap: 12 }}>
               <label style={{ display: "grid", gap: 6 }}>
                 <span style={{ fontWeight: 600, fontSize: 12 }}>Live handoff triggers</span>
@@ -569,11 +918,18 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
               </label>
             </div>
           </div>
+          )}
         </div>
 
         <div style={{ display: "grid", gap: 14 }}>
+          {selectedStep === "kb" && (
           <div className="panel">
-            <div className="panel-header"><span className="panel-title">Knowledge base scope</span></div>
+            <div className="panel-header">
+              <div style={{ display: "grid", gap: 2 }}>
+                <span className="panel-title">Knowledge base scope</span>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>Control what documents and intents the AI is allowed to use.</span>
+              </div>
+            </div>
             <div style={{ padding: 16, display: "grid", gap: 12 }}>
               <label style={{ display: "grid", gap: 6 }}>
                 <span style={{ fontWeight: 600, fontSize: 12 }}>Allowed document types</span>
@@ -589,9 +945,16 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
               </div>
             </div>
           </div>
+          )}
 
+          {selectedStep === "tools" && (
           <div className="panel">
-            <div className="panel-header"><span className="panel-title">Tools and response style</span></div>
+            <div className="panel-header">
+              <div style={{ display: "grid", gap: 2 }}>
+                <span className="panel-title">Tools and response style</span>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>Pick the actions the agent can perform and how it should speak.</span>
+              </div>
+            </div>
             <div style={{ padding: 16, display: "grid", gap: 12 }}>
               <label style={{ display: "grid", gap: 6 }}>
                 <span style={{ fontWeight: 600, fontSize: 12 }}>Enabled tools</span>
@@ -629,15 +992,59 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
               </label>
             </div>
           </div>
+          )}
 
+          {selectedStep === "review" && (
           <div className="panel">
-            <div className="panel-header"><span className="panel-title">Policy preview</span></div>
-            <div style={{ padding: 16 }}>
+            <div className="panel-header">
+              <div style={{ display: "grid", gap: 2 }}>
+                <span className="panel-title">Policy preview</span>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>Review the exact policy that will be published.</span>
+              </div>
+            </div>
+            <div style={{ padding: 16, display: "grid", gap: 14 }}>
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ fontWeight: 700, fontSize: 13 }}>What changes</div>
+                <div style={{ display: "grid", gap: 8 }}>
+                  {changeSummary.length ? (
+                    changeSummary.map((item) => (
+                      <div
+                        key={item.label}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "120px 1fr",
+                          gap: 12,
+                          padding: "10px 12px",
+                          borderRadius: 12,
+                          background: "rgba(28,42,43,0.04)",
+                        }}
+                      >
+                        <strong style={{ fontSize: 12 }}>{item.label}</strong>
+                        <span style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{item.value}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ padding: "10px 12px", borderRadius: 12, background: "rgba(16,185,129,0.08)", color: "var(--ink)", fontSize: 12, lineHeight: 1.5 }}>
+                      No policy changes detected. The draft already matches the live policy.
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: "grid", gap: 10 }}>
+                <div style={{ fontWeight: 700, fontSize: 13 }}>Caller impact</div>
+                <div style={{ display: "grid", gap: 8, color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
+                  <div>AI will answer first in {draft.languagePolicy === "english_first" ? "English-first" : "caller-matching"} mode.</div>
+                  <div>Verification is required for {splitList(draft.requiredFor).join(", ") || "no intents"}.</div>
+                  <div>Live handoff triggers: {splitList(draft.liveTriggers).join(", ") || "none"}.</div>
+                  <div>Callback fallback: {draft.callbackOnUnavailable ? "enabled" : "disabled"}.</div>
+                </div>
+              </div>
               <pre style={{ margin: 0, padding: 12, overflowX: "auto", borderRadius: 12, background: "rgba(28,42,43,0.04)", fontSize: 12, lineHeight: 1.5 }}>
                 {JSON.stringify(preview, null, 2)}
               </pre>
             </div>
           </div>
+          )}
 
           <div className="panel">
             <div className="panel-header" style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
@@ -685,6 +1092,135 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
         </div>
       </div>
 
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 10 }}>
+        <div className="row-meta" style={{ gap: 10 }}>
+          <span>
+            Step {selectedStepIndex + 1} of {STEP_DEFS.length}
+          </span>
+          <span>{STEP_DEFS[selectedStepIndex]?.label ?? "Template"}</span>
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            type="button"
+            onClick={goToPreviousStep}
+            disabled={!canGoBack}
+            style={{
+              border: "1px solid rgba(28,42,43,0.14)",
+              borderRadius: 10,
+              padding: "10px 16px",
+              background: "white",
+              color: "var(--ink)",
+              fontWeight: 700,
+              cursor: canGoBack ? "pointer" : "not-allowed",
+            }}
+          >
+            Back
+          </button>
+          <button
+            type="button"
+            onClick={goToNextStep}
+            disabled={!canGoNext}
+            style={{
+              border: "none",
+              borderRadius: 10,
+              padding: "10px 16px",
+              background: canGoNext ? "var(--accent)" : "rgba(15,123,119,0.45)",
+              color: "white",
+              fontWeight: 700,
+              cursor: canGoNext ? "pointer" : "not-allowed",
+            }}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+
+      {showPublishConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(7, 17, 20, 0.55)",
+            display: "grid",
+            placeItems: "center",
+            padding: 20,
+            zIndex: 50,
+          }}
+        >
+          <div style={{ width: "min(680px, 100%)", borderRadius: 18, background: "white", boxShadow: "0 30px 70px rgba(0,0,0,0.22)" }}>
+            <div className="panel-header">
+              <div style={{ display: "grid", gap: 2 }}>
+                <span className="panel-title">Publish policy now?</span>
+                <span style={{ fontSize: 12, color: "var(--muted)" }}>This will update new calls immediately.</span>
+              </div>
+            </div>
+            <div style={{ padding: 16, display: "grid", gap: 12 }}>
+              <div className="row-meta" style={{ gap: 10 }}>
+                <span>Program: {current.name}</span>
+                <span>Next version: {String((current.policy_version ?? 1) + 1)}</span>
+              </div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {changeSummary.length ? (
+                  changeSummary.map((item) => (
+                    <div
+                      key={`confirm-${item.label}`}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "120px 1fr",
+                        gap: 12,
+                        padding: "10px 12px",
+                        borderRadius: 12,
+                        background: "rgba(28,42,43,0.04)",
+                      }}
+                    >
+                      <strong style={{ fontSize: 12 }}>{item.label}</strong>
+                      <span style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{item.value}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ padding: "10px 12px", borderRadius: 12, background: "rgba(16,185,129,0.08)", color: "var(--ink)", fontSize: 12, lineHeight: 1.5 }}>
+                    No policy changes detected. You can still publish to refresh the active version.
+                  </div>
+                )}
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowPublishConfirm(false)}
+                  style={{
+                    border: "1px solid rgba(28,42,43,0.14)",
+                    borderRadius: 10,
+                    padding: "10px 16px",
+                    background: "white",
+                    color: "var(--ink)",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={savePolicy}
+                  disabled={saving}
+                  style={{
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "10px 16px",
+                    background: saving ? "rgba(15,123,119,0.45)" : "var(--accent)",
+                    color: "white",
+                    fontWeight: 700,
+                    cursor: saving ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {saving ? "Publishing..." : "Publish now"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 14 }}>
         <p style={{ margin: 0, fontSize: "0.78rem", color: "var(--muted)" }}>
           Changes publish to new calls immediately and are mirrored into the legacy verification and handoff fields for compatibility.
@@ -692,7 +1228,7 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {status && <span style={{ color: status.startsWith("Saved") ? "var(--success)" : "var(--danger)", fontSize: 13, fontWeight: 600 }}>{status}</span>}
           <button
-            onClick={savePolicy}
+            onClick={() => setShowPublishConfirm(true)}
             disabled={saving}
             style={{
               border: "none",
