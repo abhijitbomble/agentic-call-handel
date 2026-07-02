@@ -43,7 +43,7 @@ const navGroups: NavGroup[] = [
     label: "ADMIN",
     items: [
       { href: "/analytics", label: "Analytics", hint: "Resolution rates and trends", icon: "analytics" },
-      { href: "/agent-builder", label: "Agent Builder", hint: "Policy, KB, and escalation controls", icon: "builder" },
+      { href: "/agent-builder", label: "Agent Portal", hint: "Manage agent thinking, KB, and tools", icon: "builder" },
     ],
   },
 ];
