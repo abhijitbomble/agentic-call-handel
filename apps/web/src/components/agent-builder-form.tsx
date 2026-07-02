@@ -46,7 +46,7 @@ type ChangeSummaryItem = {
   value: string;
 };
 
-type BuilderStep = "template" | "basics" | "caller" | "kb" | "escalation" | "tools" | "review";
+type BuilderSection = "overview" | "behavior" | "knowledge_base" | "tools" | "escalation" | "test_call" | "publish";
 type TemplateId = "general_inbound" | "support" | "claims" | "billing" | "collections" | "custom";
 
 type TemplatePreset = {
@@ -76,14 +76,14 @@ const DEFAULT_DRAFT: BuilderDraft = {
   summaryBeforeHandoff: true,
 };
 
-const STEP_DEFS: { id: BuilderStep; label: string; description: string }[] = [
-  { id: "template", label: "Template", description: "Start with a preset" },
-  { id: "basics", label: "Basics", description: "Choose the core behavior" },
-  { id: "caller", label: "Caller", description: "Set verification rules" },
-  { id: "kb", label: "KB", description: "Control what it can read" },
-  { id: "escalation", label: "Escalation", description: "Define human handoff" },
-  { id: "tools", label: "Tools", description: "Pick allowed actions" },
-  { id: "review", label: "Review", description: "Check before publish" },
+const SECTION_DEFS: { id: BuilderSection; label: string; description: string }[] = [
+  { id: "overview", label: "Overview", description: "Tenant readiness and program scope" },
+  { id: "behavior", label: "Behavior", description: "Agent mode and caller rules" },
+  { id: "knowledge_base", label: "Knowledge Base", description: "Allowed docs and intents" },
+  { id: "tools", label: "Tools", description: "Actions, tone, and response style" },
+  { id: "escalation", label: "Escalation", description: "Human handoff and callback rules" },
+  { id: "test_call", label: "Test Call", description: "Validate live runtime behavior" },
+  { id: "publish", label: "Publish", description: "Review and deploy the policy" },
 ];
 
 const TEMPLATE_PRESETS: Record<TemplateId, TemplatePreset> = {
@@ -663,7 +663,7 @@ function buildOnboardingMilestones(templateId: TemplateId, draft: BuilderDraft, 
 export function AgentBuilderForm({ orgName, programs }: Props) {
   const [items, setItems] = useState(programs);
   const [selectedProgramId, setSelectedProgramId] = useState(programs[0]?.id ?? "");
-  const [selectedStep, setSelectedStep] = useState<BuilderStep>("template");
+  const [selectedSection, setSelectedSection] = useState<BuilderSection>("overview");
   const [drafts, setDrafts] = useState<Record<string, BuilderDraft>>({});
   const [status, setStatus] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -674,9 +674,6 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
   const selectedProgram = useMemo(() => items.find((program) => program.id === selectedProgramId) ?? items[0], [items, selectedProgramId]);
   const draft = selectedProgram ? (drafts[selectedProgram.id] ?? draftFromProgram(selectedProgram)) : DEFAULT_DRAFT;
   const templateId = (draft.template as TemplateId) ?? "custom";
-  const selectedStepIndex = useMemo(() => STEP_DEFS.findIndex((step) => step.id === selectedStep), [selectedStep]);
-  const canGoBack = selectedStepIndex > 0;
-  const canGoNext = selectedStepIndex >= 0 && selectedStepIndex < STEP_DEFS.length - 1;
   const previewPolicy = selectedProgram ? policyFromDraft(selectedProgram, draft) : basePolicy();
   const previewFindings = useMemo(
     () => (selectedProgram ? buildValidationFindings(policyFromDraft(selectedProgram, draft)) : []),
@@ -752,17 +749,7 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
         [selectedProgram.id]: applyTemplateToDraft(currentDraft, template),
       };
     });
-    setSelectedStep("basics");
-  }
-
-  function goToPreviousStep() {
-    if (!canGoBack) return;
-    setSelectedStep(STEP_DEFS[selectedStepIndex - 1].id);
-  }
-
-  function goToNextStep() {
-    if (!canGoNext) return;
-    setSelectedStep(STEP_DEFS[selectedStepIndex + 1].id);
+    setSelectedSection("behavior");
   }
 
   async function savePolicy() {
@@ -867,29 +854,35 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
 
       <div className="panel" style={{ marginBottom: 14 }}>
         <div className="panel-header">
-          <span className="panel-title">Builder flow</span>
+          <span className="panel-title">Portal sections</span>
         </div>
-        <div style={{ padding: 16, display: "flex", flexWrap: "wrap", gap: 10 }}>
-          {STEP_DEFS.map((step) => (
-            <button
-              key={step.id}
-              type="button"
-              onClick={() => setSelectedStep(step.id)}
-              style={{
-                border: "1px solid rgba(28,42,43,0.12)",
-                background: selectedStep === step.id ? "rgba(15,123,119,0.12)" : "white",
-                color: "var(--ink)",
-                borderRadius: 999,
-                padding: "10px 14px",
-                minWidth: 128,
-                textAlign: "left",
-                cursor: "pointer",
-              }}
-            >
-              <div style={{ fontWeight: 700, fontSize: 13 }}>{step.label}</div>
-              <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{step.description}</div>
-            </button>
-          ))}
+        <div style={{ padding: 16, display: "grid", gap: 10 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+            {SECTION_DEFS.map((section) => (
+              <button
+                key={section.id}
+                type="button"
+                onClick={() => setSelectedSection(section.id)}
+                style={{
+                  border: "1px solid rgba(28,42,43,0.12)",
+                  background: selectedSection === section.id ? "rgba(15,123,119,0.12)" : "white",
+                  color: "var(--ink)",
+                  borderRadius: 999,
+                  padding: "10px 14px",
+                  minWidth: 142,
+                  textAlign: "left",
+                  cursor: "pointer",
+                }}
+              >
+                <div style={{ fontWeight: 700, fontSize: 13 }}>{section.label}</div>
+                <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{section.description}</div>
+              </button>
+            ))}
+          </div>
+          <div className="row-meta" style={{ gap: 10 }}>
+            <span>Current section: {SECTION_DEFS.find((section) => section.id === selectedSection)?.label ?? "Overview"}</span>
+            <span>Published policy always remains the backend source of truth.</span>
+          </div>
         </div>
       </div>
 
@@ -920,245 +913,327 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
 
       <div className="double-grid" style={{ alignItems: "start" }}>
         <div style={{ display: "grid", gap: 14 }}>
-          {selectedStep === "template" && (
+          {selectedSection === "overview" && (
             <div className="panel">
               <div className="panel-header">
                 <div style={{ display: "grid", gap: 2 }}>
-                  <span className="panel-title">Start with a template</span>
-                  <span style={{ fontSize: 12, color: "var(--muted)" }}>Pick a safe preset first, then customize it for the program.</span>
+                  <span className="panel-title">Tenant overview</span>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>Start here to see readiness, scope, and what the live runtime will use.</span>
                 </div>
               </div>
               <div style={{ padding: 16, display: "grid", gap: 12 }}>
-                <div className="row-meta" style={{ gap: 10 }}>
-                  <span>Choose a preset, then adjust it to fit the client.</span>
+                <div style={{ display: "grid", gap: 10, padding: 14, borderRadius: 14, border: "1px solid rgba(28,42,43,0.12)", background: "white" }}>
+                  <div className="row-title-line" style={{ alignItems: "center" }}>
+                    <strong style={{ fontSize: 13 }}>Policy pack</strong>
+                    <span className={`badge badge-${templateId === "custom" ? "default" : "high"}`}>{templateId === "custom" ? "Custom" : templateId.replaceAll("_", " ")}</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+                    Start with a safe preset, then customize the behavior, knowledge, and escalation rules for this program.
+                  </div>
+                  <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+                    {(Object.entries(TEMPLATE_PRESETS) as [TemplateId, TemplatePreset][]).map(([id, preset]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => applyTemplate(id)}
+                        style={{
+                          textAlign: "left",
+                          padding: 14,
+                          borderRadius: 14,
+                          border: "1px solid rgba(28,42,43,0.12)",
+                          background: id === templateId ? "rgba(15,123,119,0.10)" : "white",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <div style={{ fontWeight: 700, marginBottom: 6 }}>{preset.label}</div>
+                        <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.4 }}>{preset.description}</div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
-                  {(Object.entries(TEMPLATE_PRESETS) as [TemplateId, TemplatePreset][]).map(([id, preset]) => (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => applyTemplate(id)}
+                <div style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))" }}>
+                  {onboardingMilestones.map((item) => (
+                    <div
+                      key={item.title}
                       style={{
-                        textAlign: "left",
                         padding: 14,
                         borderRadius: 14,
                         border: "1px solid rgba(28,42,43,0.12)",
-                        background: id === templateId ? "rgba(15,123,119,0.10)" : "white",
-                        cursor: "pointer",
+                        background: item.complete ? "rgba(15,123,119,0.08)" : "white",
+                        minHeight: 124,
+                        display: "grid",
+                        gap: 8,
                       }}
                     >
-                      <div style={{ fontWeight: 700, marginBottom: 6 }}>{preset.label}</div>
-                      <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.4 }}>{preset.description}</div>
-                    </button>
+                      <div className="row-title-line" style={{ alignItems: "center" }}>
+                        <strong style={{ fontSize: 13 }}>{item.title}</strong>
+                        <span className={`badge badge-${item.complete ? "high" : "default"}`}>{item.complete ? "Ready" : "Need setup"}</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{item.detail}</div>
+                    </div>
                   ))}
+                </div>
+                <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+                  <div style={{ padding: 14, borderRadius: 14, background: "rgba(28,42,43,0.04)" }}>
+                    <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 6 }}>What the tenant provides</div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+                      Use case, policy pack, KB files, queue ownership, and human routing rules.
+                    </div>
+                  </div>
+                  <div style={{ padding: 14, borderRadius: 14, background: "rgba(28,42,43,0.04)" }}>
+                    <div style={{ fontWeight: 700, fontSize: 12, marginBottom: 6 }}>What the platform does</div>
+                    <div style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+                      Converts those choices into a live `SessionEngine` policy for phone and browser calls.
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {selectedStep === "basics" && (
-          <div className="panel">
-            <div className="panel-header">
-              <div style={{ display: "grid", gap: 2 }}>
-                <span className="panel-title">Agent mode</span>
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>Choose how the agent should behave on every call.</span>
+          {selectedSection === "behavior" && (
+            <div className="panel">
+              <div className="panel-header">
+                <div style={{ display: "grid", gap: 2 }}>
+                  <span className="panel-title">Behavior and caller rules</span>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>Set the agent mode, supported channels, verification, and confidence rules.</span>
+                </div>
+              </div>
+              <div style={{ padding: 16, display: "grid", gap: 12 }}>
+                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>Operating mode</span>
+                    <select value={draft.mode} onChange={(e) => updateDraft({ mode: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
+                      <option value="ai_first_then_human">AI first, then human on approved triggers</option>
+                      <option value="ai_only">AI only</option>
+                      <option value="callback_only">Callback only fallback</option>
+                    </select>
+                  </label>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>Supported channels</span>
+                    <input value={draft.supportedChannels} onChange={(e) => updateDraft({ supportedChannels: e.target.value })} placeholder="phone, browser" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+                  </label>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>Required for intents</span>
+                    <input value={draft.requiredFor} onChange={(e) => updateDraft({ requiredFor: e.target.value })} placeholder="case_status" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+                  </label>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>Allowed identifiers</span>
+                    <input value={draft.allowedIdentifiers} onChange={(e) => updateDraft({ allowedIdentifiers: e.target.value })} placeholder="customer_code, last4_phone" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+                  </label>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>Low confidence threshold</span>
+                    <input type="number" min="0" max="1" step="0.05" value={draft.lowConfidenceThreshold} onChange={(e) => updateDraft({ lowConfidenceThreshold: Number(e.target.value) })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+                  </label>
+                </div>
               </div>
             </div>
-            <div style={{ padding: 16, display: "grid", gap: 12 }}>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Operating mode</span>
-                <select value={draft.mode} onChange={(e) => updateDraft({ mode: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
-                  <option value="ai_first_then_human">AI first, then human on approved triggers</option>
-                  <option value="ai_only">AI only</option>
-                  <option value="callback_only">Callback only fallback</option>
-                </select>
-              </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Supported channels</span>
-                <input value={draft.supportedChannels} onChange={(e) => updateDraft({ supportedChannels: e.target.value })} placeholder="phone, browser" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
-              </label>
-            </div>
-          </div>
           )}
 
-          {selectedStep === "caller" && (
-          <div className="panel">
-            <div className="panel-header">
-              <div style={{ display: "grid", gap: 2 }}>
-                <span className="panel-title">Caller verification</span>
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>Define when the caller must prove identity and how strict to be.</span>
+          {selectedSection === "knowledge_base" && (
+            <div className="panel">
+              <div className="panel-header">
+                <div style={{ display: "grid", gap: 2 }}>
+                  <span className="panel-title">Knowledge base scope</span>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>Control what documents and intents the AI is allowed to use.</span>
+                </div>
+              </div>
+              <div style={{ padding: 16, display: "grid", gap: 12 }}>
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 12 }}>Allowed document types</span>
+                  <input value={draft.allowedDocumentTypes} onChange={(e) => updateDraft({ allowedDocumentTypes: e.target.value })} placeholder="faq, policy, procedure" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+                </label>
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 12 }}>Allowed intents for KB answers</span>
+                  <input value={draft.allowedIntents} onChange={(e) => updateDraft({ allowedIntents: e.target.value })} placeholder="faq_answer, case_status" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+                </label>
+                <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+                  <div style={{ padding: 14, borderRadius: 14, background: "rgba(28,42,43,0.04)", fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+                    KB files should be uploaded through the dedicated KB screen, then attached to this program by document type and intent.
+                  </div>
+                  <div style={{ padding: 14, borderRadius: 14, background: "rgba(28,42,43,0.04)", fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+                    The runtime will only search approved documents for approved intents in this program.
+                  </div>
+                </div>
               </div>
             </div>
-            <div style={{ padding: 16, display: "grid", gap: 12 }}>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Required for intents</span>
-                <input value={draft.requiredFor} onChange={(e) => updateDraft({ requiredFor: e.target.value })} placeholder="case_status" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
-              </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Allowed identifiers</span>
-                <input value={draft.allowedIdentifiers} onChange={(e) => updateDraft({ allowedIdentifiers: e.target.value })} placeholder="customer_code, last4_phone" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
-              </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Low confidence threshold</span>
-                <input type="number" min="0" max="1" step="0.05" value={draft.lowConfidenceThreshold} onChange={(e) => updateDraft({ lowConfidenceThreshold: Number(e.target.value) })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
-              </label>
-            </div>
-          </div>
           )}
 
-          {selectedStep === "escalation" && (
-          <div className="panel">
-            <div className="panel-header">
-              <div style={{ display: "grid", gap: 2 }}>
-                <span className="panel-title">Escalation rules</span>
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>Choose when the AI should move to a human or callback.</span>
+          {selectedSection === "tools" && (
+            <div className="panel">
+              <div className="panel-header">
+                <div style={{ display: "grid", gap: 2 }}>
+                  <span className="panel-title">Tools and response style</span>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>Pick the actions the agent can perform and how it should speak.</span>
+                </div>
+              </div>
+              <div style={{ padding: 16, display: "grid", gap: 12 }}>
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 12 }}>Enabled tools</span>
+                  <input value={draft.enabledTools} onChange={(e) => updateDraft({ enabledTools: e.target.value })} placeholder="lookup_case, create_ticket" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+                </label>
+                <div style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>Tone</span>
+                    <select value={draft.tone} onChange={(e) => updateDraft({ tone: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
+                      <option value="calm">Calm</option>
+                      <option value="warm">Warm</option>
+                      <option value="formal">Formal</option>
+                    </select>
+                  </label>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>Length</span>
+                    <select value={draft.length} onChange={(e) => updateDraft({ length: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
+                      <option value="short">Short</option>
+                      <option value="medium">Medium</option>
+                    </select>
+                  </label>
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span style={{ fontWeight: 600, fontSize: 12 }}>Language policy</span>
+                    <select value={draft.languagePolicy} onChange={(e) => updateDraft({ languagePolicy: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
+                      <option value="match_caller">Match caller language</option>
+                      <option value="english_first">English first</option>
+                    </select>
+                  </label>
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="checkbox" checked={draft.askOneQuestionAtATime} onChange={(e) => updateDraft({ askOneQuestionAtATime: e.target.checked })} />
+                  <span style={{ fontWeight: 600, fontSize: 12 }}>Ask one question at a time</span>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="checkbox" checked={draft.confirmCriticalDetails} onChange={(e) => updateDraft({ confirmCriticalDetails: e.target.checked })} />
+                  <span style={{ fontWeight: 600, fontSize: 12 }}>Confirm critical details</span>
+                </label>
               </div>
             </div>
-            <div style={{ padding: 16, display: "grid", gap: 12 }}>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Live handoff triggers</span>
-                <input value={draft.liveTriggers} onChange={(e) => updateDraft({ liveTriggers: e.target.value })} placeholder="human_request, angry, verification_failures" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
-              </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Callback triggers</span>
-                <input value={draft.callbackTriggers} onChange={(e) => updateDraft({ callbackTriggers: e.target.value })} placeholder="no_agent_available, callback_request" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <input type="checkbox" checked={draft.callbackOnUnavailable} onChange={(e) => updateDraft({ callbackOnUnavailable: e.target.checked })} />
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Queue callback when no agent is available</span>
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <input type="checkbox" checked={draft.summaryBeforeHandoff} onChange={(e) => updateDraft({ summaryBeforeHandoff: e.target.checked })} />
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Require summary before handoff</span>
-              </label>
+          )}
+
+          {selectedSection === "escalation" && (
+            <div className="panel">
+              <div className="panel-header">
+                <div style={{ display: "grid", gap: 2 }}>
+                  <span className="panel-title">Escalation rules</span>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>Choose when the AI should move to a human or callback.</span>
+                </div>
+              </div>
+              <div style={{ padding: 16, display: "grid", gap: 12 }}>
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 12 }}>Live handoff triggers</span>
+                  <input value={draft.liveTriggers} onChange={(e) => updateDraft({ liveTriggers: e.target.value })} placeholder="human_request, angry, verification_failures" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+                </label>
+                <label style={{ display: "grid", gap: 6 }}>
+                  <span style={{ fontWeight: 600, fontSize: 12 }}>Callback triggers</span>
+                  <input value={draft.callbackTriggers} onChange={(e) => updateDraft({ callbackTriggers: e.target.value })} placeholder="no_agent_available, callback_request" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="checkbox" checked={draft.callbackOnUnavailable} onChange={(e) => updateDraft({ callbackOnUnavailable: e.target.checked })} />
+                  <span style={{ fontWeight: 600, fontSize: 12 }}>Queue callback when no agent is available</span>
+                </label>
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input type="checkbox" checked={draft.summaryBeforeHandoff} onChange={(e) => updateDraft({ summaryBeforeHandoff: e.target.checked })} />
+                  <span style={{ fontWeight: 600, fontSize: 12 }}>Require summary before handoff</span>
+                </label>
+              </div>
             </div>
-          </div>
           )}
         </div>
 
         <div style={{ display: "grid", gap: 14 }}>
-          {selectedStep === "kb" && (
-          <div className="panel">
-            <div className="panel-header">
-              <div style={{ display: "grid", gap: 2 }}>
-                <span className="panel-title">Knowledge base scope</span>
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>Control what documents and intents the AI is allowed to use.</span>
+          {selectedSection === "test_call" && (
+            <div className="panel">
+              <div className="panel-header">
+                <div style={{ display: "grid", gap: 2 }}>
+                  <span className="panel-title">Test call rehearsal</span>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>Use this section to verify what the runtime will do before a real caller reaches it.</span>
+                </div>
+              </div>
+              <div style={{ padding: 16, display: "grid", gap: 14 }}>
+                <div style={{ display: "grid", gap: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>Expected caller experience</div>
+                  <div style={{ display: "grid", gap: 8, color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
+                    <div>AI will answer first in {draft.languagePolicy === "english_first" ? "English-first" : "caller-matching"} mode.</div>
+                    <div>The agent will ask one question at a time: {draft.askOneQuestionAtATime ? "enabled" : "disabled"}.</div>
+                    <div>Critical details will be confirmed: {draft.confirmCriticalDetails ? "yes" : "no"}.</div>
+                    <div>Live handoff triggers: {splitList(draft.liveTriggers).join(", ") || "none"}.</div>
+                  </div>
+                </div>
+                <div style={{ display: "grid", gap: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>Draft policy payload</div>
+                  <pre style={{ margin: 0, padding: 12, overflowX: "auto", borderRadius: 12, background: "rgba(28,42,43,0.04)", fontSize: 12, lineHeight: 1.5 }}>
+                    {JSON.stringify(preview, null, 2)}
+                  </pre>
+                </div>
               </div>
             </div>
-            <div style={{ padding: 16, display: "grid", gap: 12 }}>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Allowed document types</span>
-                <input value={draft.allowedDocumentTypes} onChange={(e) => updateDraft({ allowedDocumentTypes: e.target.value })} placeholder="faq, policy, procedure" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
-              </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Allowed intents for KB answers</span>
-                <input value={draft.allowedIntents} onChange={(e) => updateDraft({ allowedIntents: e.target.value })} placeholder="faq_answer, case_status" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
-              </label>
-              <div className="row-meta" style={{ gap: 10 }}>
-                <span>Approved only</span>
-                <span>Match same program only</span>
-              </div>
-            </div>
-          </div>
           )}
 
-          {selectedStep === "tools" && (
-          <div className="panel">
-            <div className="panel-header">
-              <div style={{ display: "grid", gap: 2 }}>
-                <span className="panel-title">Tools and response style</span>
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>Pick the actions the agent can perform and how it should speak.</span>
+          {selectedSection === "publish" && (
+            <div className="panel">
+              <div className="panel-header">
+                <div style={{ display: "grid", gap: 2 }}>
+                  <span className="panel-title">Policy preview</span>
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>Review the exact policy that will be published.</span>
+                </div>
               </div>
-            </div>
-            <div style={{ padding: 16, display: "grid", gap: 12 }}>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Enabled tools</span>
-                <input value={draft.enabledTools} onChange={(e) => updateDraft({ enabledTools: e.target.value })} placeholder="lookup_case, create_ticket" style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }} />
-              </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Tone</span>
-                <select value={draft.tone} onChange={(e) => updateDraft({ tone: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
-                  <option value="calm">Calm</option>
-                  <option value="warm">Warm</option>
-                  <option value="formal">Formal</option>
-                </select>
-              </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Length</span>
-                <select value={draft.length} onChange={(e) => updateDraft({ length: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
-                  <option value="short">Short</option>
-                  <option value="medium">Medium</option>
-                </select>
-              </label>
-              <label style={{ display: "grid", gap: 6 }}>
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Language policy</span>
-                <select value={draft.languagePolicy} onChange={(e) => updateDraft({ languagePolicy: e.target.value })} style={{ padding: 10, borderRadius: 10, border: "1px solid rgba(28,42,43,0.14)" }}>
-                  <option value="match_caller">Match caller language</option>
-                  <option value="english_first">English first</option>
-                </select>
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <input type="checkbox" checked={draft.askOneQuestionAtATime} onChange={(e) => updateDraft({ askOneQuestionAtATime: e.target.checked })} />
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Ask one question at a time</span>
-              </label>
-              <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <input type="checkbox" checked={draft.confirmCriticalDetails} onChange={(e) => updateDraft({ confirmCriticalDetails: e.target.checked })} />
-                <span style={{ fontWeight: 600, fontSize: 12 }}>Confirm critical details</span>
-              </label>
-            </div>
-          </div>
-          )}
-
-          {selectedStep === "review" && (
-          <div className="panel">
-            <div className="panel-header">
-              <div style={{ display: "grid", gap: 2 }}>
-                <span className="panel-title">Policy preview</span>
-                <span style={{ fontSize: 12, color: "var(--muted)" }}>Review the exact policy that will be published.</span>
-              </div>
-            </div>
-            <div style={{ padding: 16, display: "grid", gap: 14 }}>
-              <div style={{ display: "grid", gap: 10 }}>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>What changes</div>
-                <div style={{ display: "grid", gap: 8 }}>
-                  {changeSummary.length ? (
-                    changeSummary.map((item) => (
-                      <div
-                        key={item.label}
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "120px 1fr",
-                          gap: 12,
-                          padding: "10px 12px",
-                          borderRadius: 12,
-                          background: "rgba(28,42,43,0.04)",
-                        }}
-                      >
-                        <strong style={{ fontSize: 12 }}>{item.label}</strong>
-                        <span style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{item.value}</span>
+              <div style={{ padding: 16, display: "grid", gap: 14 }}>
+                <div style={{ display: "grid", gap: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>What changes</div>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {changeSummary.length ? (
+                      changeSummary.map((item) => (
+                        <div
+                          key={item.label}
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "120px 1fr",
+                            gap: 12,
+                            padding: "10px 12px",
+                            borderRadius: 12,
+                            background: "rgba(28,42,43,0.04)",
+                          }}
+                        >
+                          <strong style={{ fontSize: 12 }}>{item.label}</strong>
+                          <span style={{ fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>{item.value}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: "10px 12px", borderRadius: 12, background: "rgba(16,185,129,0.08)", color: "var(--ink)", fontSize: 12, lineHeight: 1.5 }}>
+                        No policy changes detected. The draft already matches the live policy.
                       </div>
-                    ))
-                  ) : (
-                    <div style={{ padding: "10px 12px", borderRadius: 12, background: "rgba(16,185,129,0.08)", color: "var(--ink)", fontSize: 12, lineHeight: 1.5 }}>
-                      No policy changes detected. The draft already matches the live policy.
-                    </div>
-                  )}
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: "grid", gap: 10 }}>
+                  <div style={{ fontWeight: 700, fontSize: 13 }}>Caller impact</div>
+                  <div style={{ display: "grid", gap: 8, color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
+                    <div>Verification is required for {splitList(draft.requiredFor).join(", ") || "no intents"}.</div>
+                    <div>Live handoff triggers: {splitList(draft.liveTriggers).join(", ") || "none"}.</div>
+                    <div>Callback fallback: {draft.callbackOnUnavailable ? "enabled" : "disabled"}.</div>
+                  </div>
+                </div>
+                <pre style={{ margin: 0, padding: 12, overflowX: "auto", borderRadius: 12, background: "rgba(28,42,43,0.04)", fontSize: 12, lineHeight: 1.5 }}>
+                  {JSON.stringify(preview, null, 2)}
+                </pre>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowPublishConfirm(true)}
+                    disabled={saving}
+                    style={{
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "10px 18px",
+                      background: saving ? "rgba(15,123,119,0.45)" : "var(--accent)",
+                      color: "white",
+                      fontWeight: 700,
+                      cursor: saving ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    {saving ? "Saving..." : "Publish policy"}
+                  </button>
                 </div>
               </div>
-              <div style={{ display: "grid", gap: 10 }}>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>Caller impact</div>
-                <div style={{ display: "grid", gap: 8, color: "var(--muted)", fontSize: 12, lineHeight: 1.5 }}>
-                  <div>AI will answer first in {draft.languagePolicy === "english_first" ? "English-first" : "caller-matching"} mode.</div>
-                  <div>Verification is required for {splitList(draft.requiredFor).join(", ") || "no intents"}.</div>
-                  <div>Live handoff triggers: {splitList(draft.liveTriggers).join(", ") || "none"}.</div>
-                  <div>Callback fallback: {draft.callbackOnUnavailable ? "enabled" : "disabled"}.</div>
-                </div>
-              </div>
-              <pre style={{ margin: 0, padding: 12, overflowX: "auto", borderRadius: 12, background: "rgba(28,42,43,0.04)", fontSize: 12, lineHeight: 1.5 }}>
-                {JSON.stringify(preview, null, 2)}
-              </pre>
             </div>
-          </div>
           )}
 
           <div className="panel">
@@ -1204,49 +1279,6 @@ export function AgentBuilderForm({ orgName, programs }: Props) {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginTop: 10 }}>
-        <div className="row-meta" style={{ gap: 10 }}>
-          <span>
-            Step {selectedStepIndex + 1} of {STEP_DEFS.length}
-          </span>
-          <span>{STEP_DEFS[selectedStepIndex]?.label ?? "Template"}</span>
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            type="button"
-            onClick={goToPreviousStep}
-            disabled={!canGoBack}
-            style={{
-              border: "1px solid rgba(28,42,43,0.14)",
-              borderRadius: 10,
-              padding: "10px 16px",
-              background: "white",
-              color: "var(--ink)",
-              fontWeight: 700,
-              cursor: canGoBack ? "pointer" : "not-allowed",
-            }}
-          >
-            Back
-          </button>
-          <button
-            type="button"
-            onClick={goToNextStep}
-            disabled={!canGoNext}
-            style={{
-              border: "none",
-              borderRadius: 10,
-              padding: "10px 16px",
-              background: canGoNext ? "var(--accent)" : "rgba(15,123,119,0.45)",
-              color: "white",
-              fontWeight: 700,
-              cursor: canGoNext ? "pointer" : "not-allowed",
-            }}
-          >
-            Next
-          </button>
         </div>
       </div>
 
