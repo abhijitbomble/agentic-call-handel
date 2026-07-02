@@ -174,6 +174,43 @@ export default async function HomePage() {
     <div className="page-content">
       <AutoRefresh intervalMs={30_000} />
 
+      <div className="dashboard-home-hero panel">
+        <div className="panel-header dashboard-home-hero-header">
+          <div className="panel-title-group">
+            <span className="panel-title">Operations overview</span>
+            <span className="panel-count-badge">Live</span>
+          </div>
+          <div className="row-meta" style={{ gap: 10 }}>
+            <span>{data.organizations.length} organizations</span>
+            <span>{data.programs.length} programs</span>
+            <span>{data.queues.length} queues</span>
+          </div>
+        </div>
+        <div className="dashboard-home-hero-body">
+          <div className="dashboard-home-hero-copy">
+            <h1>VoiceOps Control Center</h1>
+            <p>
+              A live operating console for calls, callbacks, QA, and AI policy. The workspace stays focused on what needs attention now while the
+              agent runtime handles the call path in the background.
+            </p>
+          </div>
+          <div className="dashboard-home-hero-metrics">
+            <div className="dashboard-home-hero-metric">
+              <span className="dashboard-home-hero-label">Active calls</span>
+              <strong>{data.analytics.live_calls}</strong>
+            </div>
+            <div className="dashboard-home-hero-metric">
+              <span className="dashboard-home-hero-label">Pending callbacks</span>
+              <strong>{data.analytics.callbacks_pending}</strong>
+            </div>
+            <div className="dashboard-home-hero-metric">
+              <span className="dashboard-home-hero-label">QA queue</span>
+              <strong>{data.analytics.qa_pending}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="kpi-row">
         <StatCard
           icon="phone"
@@ -223,13 +260,13 @@ export default async function HomePage() {
 
       <div className="dashboard-columns">
         <div className="dashboard-column dashboard-column-primary">
-          <div className="panel">
+          <div className="panel dashboard-table-panel">
             <div className="panel-header">
               <div className="panel-title-group">
                 <span className="panel-title">Live Calls</span>
                 <span className="panel-count-badge panel-count-badge-orange">{activeCalls.length} active</span>
               </div>
-              <Link href="/calls" className="panel-link">View All →</Link>
+              <Link href="/calls" className="panel-link">View all →</Link>
             </div>
             <div className="panel-body">
               <table className="calls-table">
@@ -289,13 +326,13 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="panel">
+          <div className="panel dashboard-table-panel">
             <div className="panel-header">
               <div className="panel-title-group">
                 <span className="panel-title">QA Review</span>
                 <span className="panel-count-badge">{data.analytics.qa_pending} pending</span>
               </div>
-              <Link href="/reviews" className="panel-link">View All →</Link>
+              <Link href="/reviews" className="panel-link">View all →</Link>
             </div>
             <div className="panel-body">
               <table className="qa-table">
@@ -346,7 +383,7 @@ export default async function HomePage() {
           {activeHandoff ? (
             <ActiveHandoffPanel call={activeHandoff} transcript={handoffTranscript} />
           ) : (
-            <div className="panel" style={{ padding: "24px", textAlign: "center", color: "var(--muted)", fontSize: "0.85rem" }}>
+            <div className="panel dashboard-empty-panel" style={{ padding: "24px", textAlign: "center", color: "var(--muted)", fontSize: "0.85rem" }}>
               No active handoffs
             </div>
           )}
